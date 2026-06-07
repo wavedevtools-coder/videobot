@@ -39,14 +39,6 @@ class FLUXImageGenerator:
         }
         self.dtype = dtype_map.get(dtype_name, torch.bfloat16)
 
-    "bf16": torch.bfloat16,
-    "bfloat16": torch.bfloat16,
-    "fp16": torch.float16,
-    "float16": torch.float16,
-    "fp32": torch.float32,
-    "float32": torch.float32,
-}
-
         self.guidance_scale = self.img_config.get('guidance_scale', 3.5)
         self.num_steps = self.img_config.get('num_inference_steps', 28)
         self.max_seq_length = self.img_config.get('max_sequence_length', 512)
