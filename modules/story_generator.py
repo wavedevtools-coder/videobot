@@ -238,7 +238,11 @@ Create something COMPLETELY DIFFERENT. Use an unexpected combination of:
 
         try:
             response = requests.post(url, json=payload, timeout=120)
-            response.raise_for_status()
+            if not response.ok:
+                raise RuntimeError(
+                    f"Ollama API error: {response.status_code} {response.reason} "
+                    f"| Body: {response.text[:500]}"
+                )
             result = response.json()
             return result.get('response', '')
         except requests.exceptions.ConnectionError:
