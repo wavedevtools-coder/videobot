@@ -85,23 +85,31 @@ class LTXVideoGenerator:
 
             image = Image.open(image_path).convert("RGB")
 
-            raw_w, raw_h = image.size  # PIL gives (w, h)
-            # LTX requires dimensions divisible by 32 — round up to nearest 32
-            width  = ((raw_w + 31) // 32) * 32
-            height = ((raw_h + 31) // 32) * 32
-            if (width, height) != (raw_w, raw_h):
-                logger.info(f"Rounded dimensions {raw_w}x{raw_h} → {width}x{height} (LTX needs multiples of 32)")
+            orig_w, orig_h = image.size
+            
+            # LTX prefers exactly 576x1024 for 9:16 vertical video (perfect multiples of 32).
+            # 720 is not divisible by 32, so we generate at 576x1024 and upscale back to 720p.
+            gen_w, gen_h = 576, 1024
+            if image.size != (gen_w, gen_h):
+                logger.info(f"Resizing image {orig_w}x{orig_h} → {gen_w}x{gen_h} for LTX generation")
+                image = image.resize((gen_w, gen_h), Image.LANCZOS)
+
             result = self._pipe(
                 image=image,
                 prompt=prompt,
                 num_inference_steps=self.num_steps,
                 num_frames=num_frames,
-                width=width,
-                height=height,
+                width=gen_w,
+                height=gen_h,
                 generator=generator,
             )
 
             video = result.frames[0]  # List of PIL Images
+
+            # Upscale frames back to the original requested size (720x1280) so FFmpeg concat succeeds
+            if (gen_w, gen_h) != (orig_w, orig_h):
+                logger.info(f"Upscaling generated frames back to {orig_w}x{orig_h}")
+                video = [frame.resize((orig_w, orig_h), Image.LANCZOS) for frame in video]
 
             # Save as MP4
             self._save_video(video, output_path, fps)
