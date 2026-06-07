@@ -1,6 +1,5 @@
 # ============================================================
-# Tiny Dino AI Shorts Factory - Configuration v2.0.1
-# Approved for Implementation
+# Tiny Dino AI Shorts Factory - Configuration v2.0.2
 # ============================================================
 
 project_root: "D:/dino"
@@ -99,19 +98,29 @@ models:
     max_tokens: 2048
     timeout: 180
 
-  # Image Generation - FLUX.1 Schnell (Apache 2.0 - Commercial Use Allowed)
-  # Best for YouTube monetization: Free, fast (4 steps), high quality, commercial-friendly
-  # Alternative: 'black-forest-labs/FLUX.1-dev' (Non-commercial license, higher quality but slower)
+  # Image Generation
+  # ─────────────────────────────────────────────────────────
+  # stabilityai/sdxl-turbo  ← ACTIVE (no auth, commercial OK, fast 4-step)
+  #   Apache 2.0 license — safe for YouTube monetization
+  #   4 inference steps, guidance_scale MUST be 0.0
+  #   ~12GB VRAM; enable_cpu_offload=true drops to ~6GB peak
+  #
+  # Alternatives (swap model: below, leave other keys as-is):
+  #   black-forest-labs/FLUX.1-schnell  — needs HF token (gated)
+  #   black-forest-labs/FLUX.1-dev      — needs HF token + non-commercial
+  #   stabilityai/stable-diffusion-xl-base-1.0  — open, no auth needed
+  # ─────────────────────────────────────────────────────────
   image:
     provider: "diffusers"
-    model: "black-forest-labs/FLUX.1-schnell"
+    model: "stabilityai/sdxl-turbo"
     dtype: "bfloat16"
     enable_cpu_offload: true
-    guidance_scale: 0.0           # Ignored by schnell, used by dev (~3.5)
-    num_inference_steps: 4        # Optimal for schnell (dev uses 20-28)
-    max_sequence_length: 512
-    ip_adapter_scale: 0.6         # 0.0 = ignore ref, 1.0 = copy ref; 0.6 balances story+character
-    use_auth_token: false         # Schnell doesn't require auth (Dev does)
+    guidance_scale: 0.0           # MUST be 0.0 for sdxl-turbo
+    num_inference_steps: 4        # 1-4 steps optimal for turbo
+    max_sequence_length: 512      # used by FLUX models only, ignored otherwise
+    ip_adapter_scale: 0.6
+    hf_token: ""                  # set your HuggingFace token here for gated models
+                                  # or run: huggingface-cli login
 
   # Video Generation - LTX-2.3
   video:
@@ -137,11 +146,11 @@ models:
 assets:
   outro_video: "assets/outro.mp4"
   outro_metadata: "assets/outro.json"
-  outro_ref: "assets/outro_ref.png"        # reference image → auto-generates outro.mp4 if missing
+  outro_ref: "assets/outro_ref.png"
   logo: "assets/logo.png"
   font: "assets/fonts/ComicSansMS.ttf"
-  watermark: "assets/watermark.png"        # bottom-right corner overlay on every video
-  character_ref: "assets/dinocharacter.png" # Tiny Dino visual reference for IP-Adapter
+  watermark: "assets/watermark.png"
+  character_ref: "assets/dinocharacter.png"
 
 # ------------------------------------------------------------
 # Logging

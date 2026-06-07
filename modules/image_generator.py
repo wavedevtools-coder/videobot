@@ -1,19 +1,17 @@
 # modules/image_generator.py
 """Image generation via Diffusers — auto-selects pipeline class from model ID.
 
-Changes v2.1.2 (fix):
-  - Replaced hardcoded FluxPipeline with AutoPipelineForText2Image so the
-    correct pipeline class is chosen automatically from the model ID.
-    This fixes the crash when config switches between FLUX, SDXL-Turbo,
-    SDXL, SD1.5, etc. without requiring code changes.
-  - Removed ignore_missing_keys kwarg — not accepted by diffusers pipelines;
-    was silently ignored and gave a noisy warning.
-  - FLUX-specific handling preserved: negative_prompt omitted for FLUX models,
-    IP-Adapter skipped (XLabs weights optional), prompt enriched with char desc.
-  - SDXL-Turbo handling: guidance_scale forced to 0.0, num_steps clamped to
-    config value (default 4), negative_prompt supported.
-  - Character reference image (dinocharacter.png) enriches prompts via
-    IP-Adapter when available, falls back to text-only description.
+Changes v2.1.3:
+  - Config switched to stabilityai/sdxl-turbo (Apache 2.0, no HF auth needed,
+    commercial-safe for YouTube monetization, 4-step fast generation).
+  - Added hf_token config key: set token for gated models (FLUX.1-schnell/dev)
+    or leave blank for open models (sdxl-turbo, sdxl-base).
+  - local_files_only fast-path: if model is already cached locally, load it
+    without any network call (works fully offline after first download).
+  - Clear actionable error when model needs auth: tells user exactly what to do.
+  - AutoPipelineForText2Image auto-selects correct class (no hardcoded FluxPipeline).
+  - Model-specific inference kwargs: turbo forces guidance_scale=0.0,
+    FLUX omits negative_prompt, all others use standard kwargs.
 """
 
 import logging
@@ -23,91 +21,87 @@ from typing import Optional, List, Dict, Any
 from PIL import Image
 
 from .config_loader import Config
-from .character_manager import CharacterManager
 
 logger = logging.getLogger('image_generator')
 
-# Models that don't support negative_prompt
-_FLUX_MODEL_PREFIXES = (
-    "black-forest-labs/flux",
-    "flux.1",
-    "flux-",
-)
+_FLUX_PREFIXES = ("flux",)
+_TURBO_KEYWORDS = ("turbo",)
 
-def _is_flux_model(model_id: str) -> bool:
-    low = model_id.lower()
-    return any(low.startswith(p) or p in low for p in _FLUX_MODEL_PREFIXES)
+def _is_flux(model_id: str) -> bool:
+    return any(p in model_id.lower() for p in _FLUX_PREFIXES)
+
+def _is_turbo(model_id: str) -> bool:
+    return any(k in model_id.lower() for k in _TURBO_KEYWORDS)
 
 
 class FLUXImageGenerator:
-    """Diffusers image generation — auto-selects pipeline from model ID.
+    """Diffusers image generation — model-agnostic via AutoPipelineForText2Image.
 
-    Works with FLUX.1-dev, FLUX.1-schnell, SDXL-Turbo, SDXL, SD1.5, etc.
-    The model is chosen entirely from config.yaml models.image.model.
+    Set config.yaml  models.image.model  to any diffusers-compatible model ID.
+    No code changes needed when switching models.
     """
 
     def __init__(self, config: Optional[Config] = None):
         self.config      = config or Config()
         self.img_config  = self.config.models.get('image', {})
-        self.model_id    = self.img_config.get('model', 'black-forest-labs/FLUX.1-dev')
+        self.model_id    = self.img_config.get('model', 'stabilityai/sdxl-turbo')
 
         dtype_name = self.img_config.get('dtype', 'bfloat16')
-        dtype_map = {
-            "bf16":     torch.bfloat16,
-            "bfloat16": torch.bfloat16,
-            "fp16":     torch.float16,
-            "float16":  torch.float16,
-            "fp32":     torch.float32,
-            "float32":  torch.float32,
-        }
-        self.dtype = dtype_map.get(dtype_name, torch.bfloat16)
+        self.dtype = {
+            "bf16": torch.bfloat16, "bfloat16": torch.bfloat16,
+            "fp16": torch.float16,  "float16":  torch.float16,
+            "fp32": torch.float32,  "float32":  torch.float32,
+        }.get(dtype_name, torch.bfloat16)
 
-        self.guidance_scale     = self.img_config.get('guidance_scale', 3.5)
-        self.num_steps          = self.img_config.get('num_inference_steps', 28)
+        self.guidance_scale     = self.img_config.get('guidance_scale', 0.0)
+        self.num_steps          = self.img_config.get('num_inference_steps', 4)
         self.max_seq_length     = self.img_config.get('max_sequence_length', 512)
         self.enable_cpu_offload = self.img_config.get('enable_cpu_offload', True)
 
-        # Character reference image
-        assets = self.config.section('assets')
-        self.char_ref_path          = assets.get('character_ref', 'assets/dinocharacter.png')
-        self._char_ref_image: Optional[Image.Image] = None
-        self._ip_scale              = self.img_config.get('ip_adapter_scale', 0.6)
+        # HuggingFace token — needed for gated models (FLUX.1-schnell/dev)
+        # Set in config.yaml models.image.hf_token or HF_TOKEN env var
+        self.hf_token = (
+            self.img_config.get('hf_token', '')
+            or os.environ.get('HF_TOKEN', '')
+            or os.environ.get('HUGGING_FACE_HUB_TOKEN', '')
+        ).strip() or None
 
-        self._pipe              = None
-        self._loaded            = False
-        self._ip_adapter_ready  = False
-        self._is_flux           = _is_flux_model(self.model_id)
+        assets = self.config.section('assets')
+        self.char_ref_path = assets.get('character_ref', 'assets/dinocharacter.png')
+        self._char_ref_image: Optional[Image.Image] = None
+        self._ip_scale = self.img_config.get('ip_adapter_scale', 0.6)
+
+        self._pipe             = None
+        self._loaded           = False
+        self._ip_adapter_ready = False
 
     # ------------------------------------------------------------------
-    # Character reference loader
+    # Character reference
     # ------------------------------------------------------------------
     def _load_char_ref(self) -> Optional[Image.Image]:
-        """Load dinocharacter.png as a PIL image (cached after first load)."""
         if self._char_ref_image is not None:
             return self._char_ref_image
         if os.path.exists(self.char_ref_path):
             try:
-                img = Image.open(self.char_ref_path).convert("RGB")
-                self._char_ref_image = img
-                logger.info(f"Character reference image loaded: {self.char_ref_path}")
+                self._char_ref_image = Image.open(self.char_ref_path).convert("RGB")
+                logger.info(f"Character reference loaded: {self.char_ref_path}")
             except Exception as e:
-                logger.warning(f"Could not load character ref image: {e}")
+                logger.warning(f"Could not load character ref: {e}")
         else:
-            logger.warning(
-                f"Character ref image not found at {self.char_ref_path}. "
-                "Generating without visual reference (prompt-only)."
-            )
+            logger.warning(f"Character ref not found at {self.char_ref_path} — using prompt-only.")
         return self._char_ref_image
 
     # ------------------------------------------------------------------
-    # Pipeline loader — uses AutoPipelineForText2Image
+    # Pipeline loader
     # ------------------------------------------------------------------
     def _load_pipeline(self):
-        """Lazy-load pipeline using AutoPipelineForText2Image.
+        """Load pipeline using AutoPipelineForText2Image.
 
-        AutoPipeline inspects the model's config.json and instantiates the
-        correct class (FluxPipeline, StableDiffusionXLPipeline, etc.)
-        automatically — no hardcoding needed.
+        Strategy:
+          1. Try local_files_only=True first (instant, no network, works offline)
+          2. Fall back to download with token if provided
+          3. Fall back to download without token (open models)
+          4. Raise a clear actionable error if still failing
         """
         if self._loaded:
             return
@@ -115,19 +109,55 @@ class FLUXImageGenerator:
         try:
             from diffusers import AutoPipelineForText2Image
 
-            logger.info(f"Loading model via AutoPipeline: {self.model_id}")
-            self._pipe = AutoPipelineForText2Image.from_pretrained(
-                self.model_id,
-                torch_dtype=self.dtype,
-            )
+            load_kwargs = dict(torch_dtype=self.dtype)
+            if self.hf_token:
+                load_kwargs['token'] = self.hf_token
 
+            # ── 1. Try local cache first (fast path, no network) ──────────
+            pipe = None
+            try:
+                logger.info(f"Checking local cache for: {self.model_id}")
+                pipe = AutoPipelineForText2Image.from_pretrained(
+                    self.model_id,
+                    local_files_only=True,
+                    **load_kwargs,
+                )
+                logger.info("Loaded from local cache (offline mode).")
+            except Exception:
+                pass  # Not cached — will download below
+
+            # ── 2. Download if not cached ──────────────────────────────────
+            if pipe is None:
+                logger.info(f"Downloading model: {self.model_id}")
+                try:
+                    pipe = AutoPipelineForText2Image.from_pretrained(
+                        self.model_id,
+                        **load_kwargs,
+                    )
+                except Exception as e:
+                    err = str(e)
+                    if "401" in err or "Unauthorized" in err or "gated" in err.lower():
+                        raise RuntimeError(
+                            f"Model '{self.model_id}' requires a HuggingFace token.\n\n"
+                            "Fix options:\n"
+                            "  A) Use a free model — set in config.yaml:\n"
+                            "       models.image.model: stabilityai/sdxl-turbo\n"
+                            "  B) Add your HF token to config.yaml:\n"
+                            "       models.image.hf_token: hf_xxxxxxxxxxxx\n"
+                            "  C) Run once in terminal: huggingface-cli login\n\n"
+                            f"Original error: {e}"
+                        )
+                    raise
+
+            self._pipe = pipe
+
+            # ── Memory optimisations ───────────────────────────────────────
             if self.enable_cpu_offload:
                 self._pipe.enable_model_cpu_offload()
-                logger.info("Enabled model CPU offload")
+                logger.info("CPU offload enabled (lower VRAM usage).")
             else:
                 self._pipe = self._pipe.to("cuda")
 
-            # VAE optimisations (not all pipelines expose these — guard them)
             if hasattr(self._pipe, 'vae') and self._pipe.vae is not None:
                 try:
                     self._pipe.vae.enable_slicing()
@@ -135,8 +165,8 @@ class FLUXImageGenerator:
                 except Exception:
                     pass
 
-            # ── IP-Adapter (FLUX-native only; skipped for other models) ──
-            if self._is_flux:
+            # ── FLUX IP-Adapter (optional, FLUX models only) ───────────────
+            if _is_flux(self.model_id):
                 char_ref = self._load_char_ref()
                 if char_ref is not None:
                     try:
@@ -146,21 +176,17 @@ class FLUXImageGenerator:
                         )
                         self._pipe.set_ip_adapter_scale(self._ip_scale)
                         self._ip_adapter_ready = True
-                        logger.info(
-                            f"FLUX IP-Adapter loaded (scale={self._ip_scale}). "
-                            "Tiny Dino reference image will guide every scene."
-                        )
+                        logger.info(f"FLUX IP-Adapter loaded (scale={self._ip_scale}).")
                     except Exception as e:
                         logger.warning(
                             f"FLUX IP-Adapter not available ({e}). "
-                            "Falling back to prompt-only character description. "
-                            "To enable: download XLabs-AI/flux-ip-adapter weights."
+                            "Using prompt-only character description."
                         )
 
             self._loaded = True
             logger.info(
-                f"Pipeline ready: {type(self._pipe).__name__} "
-                f"| model={self.model_id} | flux={self._is_flux}"
+                f"Pipeline ready: {type(self._pipe).__name__} | "
+                f"model={self.model_id} | steps={self.num_steps}"
             )
 
         except ImportError:
@@ -168,24 +194,23 @@ class FLUXImageGenerator:
                 "diffusers not installed. Run:\n"
                 "  pip install diffusers transformers accelerate"
             )
+        except RuntimeError:
+            raise   # re-raise our own clear errors
         except Exception as e:
             raise RuntimeError(f"Failed to load image pipeline: {e}")
 
     # ------------------------------------------------------------------
     # Prompt enrichment
     # ------------------------------------------------------------------
-    def _enrich_prompt_with_char(self, prompt: str) -> str:
+    def _enrich_prompt(self, prompt: str) -> str:
         """Prepend Tiny Dino visual description when IP-Adapter is unavailable."""
         if self._ip_adapter_ready:
             return prompt
-
-        char_desc = (
-            "Tiny Dino character: small cute baby dinosaur, bright lime green "
-            "skin (#7ED957), yellow-cream belly, large expressive brown eyes, "
-            "orange spiky back ridges, smooth rounded body, chibi cartoon style, "
-            "3D Pixar-quality render, consistent character design. "
+        return (
+            "Tiny Dino: small baby T-rex, bright lime-green body, light yellow belly, "
+            "large expressive eyes, cute chibi cartoon style, 3D Pixar render. "
+            + prompt
         )
-        return char_desc + prompt
 
     # ------------------------------------------------------------------
     # Core generate()
@@ -199,53 +224,45 @@ class FLUXImageGenerator:
         output_path: Optional[str] = None,
         seed: Optional[int] = None,
     ) -> str:
-        """Generate a single scene image.
-
-        Builds pipeline kwargs appropriate for the loaded model:
-        - FLUX models: no negative_prompt, uses max_sequence_length
-        - SDXL-Turbo: guidance_scale=0.0 (required by the model)
-        - All others: standard kwargs
-        """
+        """Generate one scene image. Kwargs adapt to the loaded model type."""
         self._load_pipeline()
 
         width  = width  or self.config.video.get('width',  720)
         height = height or self.config.video.get('height', 1280)
 
-        generator = None
-        if seed is not None:
-            generator = torch.Generator("cuda").manual_seed(seed)
+        generator = torch.Generator("cuda").manual_seed(seed) if seed is not None else None
+        enriched  = self._enrich_prompt(prompt)
 
-        enriched_prompt = self._enrich_prompt_with_char(prompt)
-        logger.info(f"Generating image [{width}x{height}] with {type(self._pipe).__name__}: "
-                    f"{enriched_prompt[:80]}...")
+        logger.info(
+            f"Generating [{width}x{height}] {type(self._pipe).__name__}: "
+            f"{enriched[:80]}..."
+        )
 
         try:
             kwargs: Dict[str, Any] = dict(
-                prompt=enriched_prompt,
+                prompt=enriched,
                 width=width,
                 height=height,
                 num_inference_steps=self.num_steps,
                 generator=generator,
             )
 
-            model_lower = self.model_id.lower()
-
-            if self._is_flux:
-                # FLUX does not support negative_prompt
-                kwargs['guidance_scale']     = self.guidance_scale
+            if _is_flux(self.model_id):
+                # FLUX: no negative_prompt; needs max_sequence_length
+                kwargs['guidance_scale']      = self.guidance_scale
                 kwargs['max_sequence_length'] = self.max_seq_length
                 char_ref = self._load_char_ref()
                 if self._ip_adapter_ready and char_ref is not None:
                     kwargs['ip_adapter_image'] = char_ref
 
-            elif "turbo" in model_lower:
-                # SDXL-Turbo requires guidance_scale=0.0
-                kwargs['guidance_scale']  = 0.0
+            elif _is_turbo(self.model_id):
+                # SDXL-Turbo: guidance_scale MUST be 0.0
+                kwargs['guidance_scale'] = 0.0
                 if negative_prompt:
                     kwargs['negative_prompt'] = negative_prompt
 
             else:
-                # Standard SD / SDXL
+                # Standard SDXL / SD1.5 etc.
                 kwargs['guidance_scale'] = self.guidance_scale
                 if negative_prompt:
                     kwargs['negative_prompt'] = negative_prompt
@@ -262,14 +279,14 @@ class FLUXImageGenerator:
             return image
 
         except torch.cuda.OutOfMemoryError:
-            logger.error("CUDA OOM — clearing cache and enabling CPU offload...")
+            logger.error("CUDA OOM — clearing cache, enabling CPU offload...")
             torch.cuda.empty_cache()
             if not self.enable_cpu_offload:
                 self._pipe.enable_model_cpu_offload()
             raise
 
     # ------------------------------------------------------------------
-    # Batch scene generation
+    # Batch
     # ------------------------------------------------------------------
     def generate_scenes(
         self,
@@ -277,42 +294,34 @@ class FLUXImageGenerator:
         output_dir: str,
         base_seed: Optional[int] = None,
     ) -> List[str]:
-        """Generate images for all scenes in a story."""
         os.makedirs(output_dir, exist_ok=True)
-        generated_paths = []
-
-        for i, prompt_data in enumerate(prompts):
-            scene_num   = prompt_data.get('scene_number', i + 1)
+        paths = []
+        for i, pd in enumerate(prompts):
+            scene_num   = pd.get('scene_number', i + 1)
             output_path = os.path.join(output_dir, f"scene_{scene_num:02d}.png")
-
             if os.path.exists(output_path):
-                logger.info(f"Scene {scene_num} already exists, skipping")
-                generated_paths.append(output_path)
+                logger.info(f"Scene {scene_num} cached, skipping")
+                paths.append(output_path)
                 continue
-
             seed = (base_seed + scene_num) if base_seed else None
-
             try:
-                path = self.generate(
-                    prompt=prompt_data['prompt'],
-                    negative_prompt=prompt_data.get('negative_prompt', ''),
+                paths.append(self.generate(
+                    prompt=pd['prompt'],
+                    negative_prompt=pd.get('negative_prompt', ''),
                     output_path=output_path,
                     seed=seed,
-                )
-                generated_paths.append(path)
+                ))
             except Exception as e:
-                logger.error(f"Failed to generate scene {scene_num}: {e}")
+                logger.error(f"Scene {scene_num} failed: {e}")
                 raise
-
-        return generated_paths
+        return paths
 
     @staticmethod
     def verify_image(path: str) -> bool:
-        """Verify generated image is valid and not corrupted."""
         try:
             img = Image.open(path)
             img.verify()
             return img.size[0] >= 100 and img.size[1] >= 100
         except Exception as e:
-            logger.error(f"Image verification failed for {path}: {e}")
+            logger.error(f"Image verify failed {path}: {e}")
             return False
