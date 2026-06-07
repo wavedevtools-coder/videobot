@@ -85,7 +85,12 @@ class LTXVideoGenerator:
 
             image = Image.open(image_path).convert("RGB")
 
-            width, height = image.size  # PIL gives (w, h)
+            raw_w, raw_h = image.size  # PIL gives (w, h)
+            # LTX requires dimensions divisible by 32 — round up to nearest 32
+            width  = ((raw_w + 31) // 32) * 32
+            height = ((raw_h + 31) // 32) * 32
+            if (width, height) != (raw_w, raw_h):
+                logger.info(f"Rounded dimensions {raw_w}x{raw_h} → {width}x{height} (LTX needs multiples of 32)")
             result = self._pipe(
                 image=image,
                 prompt=prompt,
