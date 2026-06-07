@@ -9,6 +9,7 @@ Changes v2.1.0:
 
 import logging
 import os
+import re
 import subprocess
 import json
 from pathlib import Path
@@ -18,6 +19,31 @@ from .config_loader import Config
 from .character_manager import CharacterManager
 
 logger = logging.getLogger('assembly_engine')
+
+
+def _ffmpeg_path(path: str) -> str:
+    """Normalize a filesystem path for FFmpeg/ffprobe.
+
+    On Windows: forward slashes and backslashes both work for FFmpeg.
+    On Linux:   Windows drive-letter paths (D:/foo) are mapped to /mnt/d/foo
+                (standard WSL mount convention). Regular Linux paths are
+                resolved to absolute paths.
+    """
+    import re
+    if not path:
+        return path
+    normalized = path.replace('\\', '/')
+    drive_match = re.match(r'^([A-Za-z]):/(.+)$', normalized)
+    if drive_match:
+        drive, rest = drive_match.group(1), drive_match.group(2)
+        if os.name == 'nt':
+            # Windows: return with forward slashes (FFmpeg handles both)
+            return f'{drive.upper()}:/{rest}'
+        else:
+            # Linux/WSL: map D:/foo → /mnt/d/foo
+            return f'/mnt/{drive.lower()}/{rest}'
+    # Regular path: resolve to absolute
+    return str(Path(path).resolve())
 
 
 class AssemblyEngine:
@@ -55,7 +81,7 @@ class AssemblyEngine:
         try:
             result = subprocess.run(
                 ['ffprobe', '-v', 'error', '-show_format', '-show_streams',
-                 '-of', 'json', path],
+                 '-of', 'json', _ffmpeg_path(path)],
                 capture_output=True, text=True, timeout=30
             )
             return json.loads(result.stdout)
@@ -119,7 +145,7 @@ class AssemblyEngine:
         cmd = [
             'ffmpeg', '-y',
             '-loop', '1',
-            '-i', outro_ref,
+            '-i', _ffmpeg_path(outro_ref),
             '-vf', vf,
             '-c:v', 'libx264',
             '-preset', 'fast',
@@ -127,7 +153,7 @@ class AssemblyEngine:
             '-t', str(duration),
             '-r', str(fps),
             '-pix_fmt', 'yuv420p',
-            outro_video,
+            _ffmpeg_path(outro_video),
         ]
 
         try:
@@ -211,23 +237,23 @@ class AssemblyEngine:
 
         # ── inputs ────────────────────────────────────────────────────
         for sv in scene_videos:
-            inputs.extend(['-i', sv])
+            inputs.extend(['-i', _ffmpeg_path(sv)])
 
         if audio_path and os.path.exists(audio_path):
-            inputs.extend(['-i', audio_path])
+            inputs.extend(['-i', _ffmpeg_path(audio_path)])
             audio_idx = len(scene_videos)
         else:
             audio_idx = None
 
         if outro_path and os.path.exists(outro_path):
-            inputs.extend(['-i', outro_path])
+            inputs.extend(['-i', _ffmpeg_path(outro_path)])
             outro_idx = len(scene_videos) + (1 if audio_idx is not None else 0)
         else:
             outro_idx = None
 
         # Watermark gets its own input index
         if use_watermark:
-            inputs.extend(['-i', watermark_path])
+            inputs.extend(['-i', _ffmpeg_path(watermark_path)])
             wm_idx = len(scene_videos) \
                    + (1 if audio_idx is not None else 0) \
                    + (1 if outro_idx is not None else 0)
@@ -243,7 +269,11 @@ class AssemblyEngine:
             )
             last_video = 'mainv'
         else:
-            last_video = '0:v:0'
+            # Single scene: pull into filtergraph via copy so -map [vout] resolves.
+            # Using a raw stream specifier like '0:v:0' with brackets in -map
+            # makes FFmpeg look for a filter output label — it doesn't exist.
+            filter_parts.append('[0:v:0]copy[vout]')
+            last_video = 'vout'
 
         # Step 2: append outro
         if outro_idx is not None:
@@ -283,18 +313,34 @@ class AssemblyEngine:
             last_video = 'watermarked'
 
         # ── audio chain ───────────────────────────────────────────────
+        # Real audio: loop it to cover the full video length
         if audio_idx is not None:
             filter_parts.append(
                 f'[{audio_idx}:a:0]aloop=loop=-1:size=2e+09[audio]'
             )
             last_audio = 'audio'
+            silence_input = None
         else:
-            filter_parts.append('aevalsrc=0:s=44100:d=1[silence]')
+            # No audio file — inject a silent anullsrc as a lavfi input.
+            # aevalsrc in filter_complex only generated 1 s of silence which
+            # caused -shortest to cut the whole video to 1 second.
+            silence_input = ['-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo']
+            # anullsrc is the last input; add its index after scene/outro/wm inputs
+            silence_idx = len(scene_videos) \
+                        + (1 if audio_idx is not None else 0) \
+                        + (1 if outro_idx is not None else 0) \
+                        + (1 if wm_idx is not None else 0)
+            filter_parts.append(
+                f'[{silence_idx}:a]aresample=44100[silence]'
+            )
             last_audio = 'silence'
 
         # ── assemble command ──────────────────────────────────────────
         cmd = ['ffmpeg', '-y']
         cmd.extend(inputs)
+        # Insert the lavfi silence input BEFORE filter_complex (after real inputs)
+        if silence_input:
+            cmd.extend(silence_input)
 
         if filter_parts:
             cmd.extend(['-filter_complex', ';'.join(filter_parts)])
@@ -314,7 +360,7 @@ class AssemblyEngine:
             '-ar', '44100',
             '-shortest',
             '-movflags', '+faststart',
-            output_path,
+            _ffmpeg_path(output_path),
         ])
 
         return cmd
@@ -393,8 +439,7 @@ class AssemblyEngine:
         fps = self.video_cfg.get('fps', 30)
 
         vf = (
-            f"color=c=0x39FF14:s={w}x{h}:d={duration}[bg];"
-            f"[bg]drawtext=text='Thanks for watching!':"
+            f"drawtext=text='Thanks for watching!':"
             f"fontcolor=white:fontsize=48:x=(w-text_w)/2:y=(h-text_h)/2-100:"
             f"box=1:boxcolor=black@0.3:boxborderw=10,"
             f"drawtext=text='Subscribe for more Tiny Dino!':"
@@ -406,11 +451,12 @@ class AssemblyEngine:
 
         cmd = [
             'ffmpeg', '-y',
-            '-f', 'lavfi', '-i', f'color=c=black:s={w}x{h}:d={duration}',
+            '-f', 'lavfi', '-i', f'color=c=0x39FF14:s={w}x{h}:d={duration}',
             '-vf', vf,
             '-c:v', 'libx264', '-preset', 'fast',
             '-r', str(fps), '-pix_fmt', 'yuv420p',
-            outro_video,
+            '-t', str(duration),
+            _ffmpeg_path(outro_video),
         ]
 
         try:
@@ -449,13 +495,14 @@ class AssemblyEngine:
                 f.write(f"{short}\n\n")
                 current_time = end
 
+        sub_path = _ffmpeg_path(subtitle_path).replace('\\', '/').replace(':', '\\:')
         cmd = [
             'ffmpeg', '-y',
-            '-i', video_path,
-            '-vf', f"subtitles='{subtitle_path}'",
+            '-i', _ffmpeg_path(video_path),
+            '-vf', f"subtitles='{sub_path}'",
             '-c:v', 'libx264', '-crf', '23', '-preset', 'medium',
             '-c:a', 'copy',
-            output_path,
+            _ffmpeg_path(output_path),
         ]
         subprocess.run(cmd, capture_output=True, timeout=120)
         return output_path
