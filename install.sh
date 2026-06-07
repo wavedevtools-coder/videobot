@@ -75,22 +75,48 @@ echo "This may take 10-20 minutes depending on your connection..."
 
 ./venv/bin/python3 << 'EOF'
 import os
+import torch
 os.environ['HF_HOME'] = '/tmp/huggingface'
 
+# 1. Image Generation (stabilityai/sdxl-turbo)
 try:
-    from diffusers import FluxPipeline
-    print("Downloading FLUX.1-schnell...")
-    pipeline = FluxPipeline.from_pretrained(
-        "black-forest-labs/FLUX.1-schnell",
-        torch_dtype="auto",
-        use_safetensors=True
+    from diffusers import AutoPipelineForText2Image
+    print("Downloading SDXL-Turbo...")
+    AutoPipelineForText2Image.from_pretrained(
+        "stabilityai/sdxl-turbo",
+        torch_dtype=torch.float16,
+        variant="fp16"
     )
-    print("✓ FLUX.1-schnell downloaded")
+    print("✓ SDXL-Turbo downloaded")
 except Exception as e:
-    print(f"Note: Model will download on first run: {e}")
+    print(f"Note: SDXL-Turbo will download on first run: {e}")
+
+# 2. Video Generation (Lightricks/LTX-Video-2-3)
+try:
+    from diffusers import LTXPipeline
+    print("Downloading LTX-Video-2-3...")
+    LTXPipeline.from_pretrained(
+        "Lightricks/LTX-Video-2-3",
+        torch_dtype=torch.bfloat16
+    )
+    print("✓ LTX-Video-2-3 downloaded")
+except Exception as e:
+    print(f"Note: LTX-Video-2-3 will download on first run: {e}")
+
+# 3. Audio Generation (stabilityai/stable-audio-open-1.0)
+try:
+    from transformers import AutoProcessor, StableAudioSpectralDiffusionPipeline
+    print("Downloading Stable Audio Open...")
+    AutoProcessor.from_pretrained("stabilityai/stable-audio-open-1.0")
+    StableAudioSpectralDiffusionPipeline.from_pretrained(
+        "stabilityai/stable-audio-open-1.0",
+        torch_dtype=torch.float16
+    )
+    print("✓ Stable Audio Open downloaded")
+except Exception as e:
+    print(f"Note: Stable Audio Open will download on first run: {e}")
 
 try:
-    import torch
     print(f"PyTorch version: {torch.__version__}")
     print(f"CUDA available: {torch.cuda.is_available()}")
 except:
