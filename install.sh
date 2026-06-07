@@ -74,8 +74,8 @@ ollama serve > /var/log/ollama.log 2>&1 &
 sleep 5
 
 # Pull required model
-echo "Pulling qwen3-coder:30b model..."
-ollama pull qwen3-coder:30b > /dev/null 2>&1
+echo "Pulling qwen2.5-coder:32b model..."
+ollama pull qwen2.5-coder:32b
 echo -e "${GREEN}✓ Ollama ready${NC}"
 
 # 5. Download Models (Pre-warm cache)
@@ -100,24 +100,23 @@ try:
 except Exception as e:
     print(f"Note: SDXL-Turbo will download on first run: {e}")
 
-# 2. Video Generation (Lightricks/LTX-Video-2-3)
+# 2. Video Generation (Lightricks/LTX-Video)
 try:
     from diffusers import LTXPipeline
-    print("Downloading LTX-Video-2-3...")
+    print("Downloading LTX-Video...")
     LTXPipeline.from_pretrained(
-        "Lightricks/LTX-Video-2-3",
+        "Lightricks/LTX-Video",
         torch_dtype=torch.bfloat16
     )
-    print("✓ LTX-Video-2-3 downloaded")
+    print("✓ LTX-Video downloaded")
 except Exception as e:
-    print(f"Note: LTX-Video-2-3 will download on first run: {e}")
+    print(f"Note: LTX-Video will download on first run: {e}")
 
 # 3. Audio Generation (stabilityai/stable-audio-open-1.0)
 try:
-    from transformers import AutoProcessor, StableAudioSpectralDiffusionPipeline
+    from diffusers import StableAudioPipeline
     print("Downloading Stable Audio Open...")
-    AutoProcessor.from_pretrained("stabilityai/stable-audio-open-1.0")
-    StableAudioSpectralDiffusionPipeline.from_pretrained(
+    StableAudioPipeline.from_pretrained(
         "stabilityai/stable-audio-open-1.0",
         torch_dtype=torch.float16
     )

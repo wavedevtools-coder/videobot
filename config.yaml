@@ -92,7 +92,7 @@ models:
   # LLM via Ollama
   llm:
     provider: "ollama"
-    model: "qwen3-coder:30b"
+    model: "qwen2.5-coder:32b"
     base_url: "http://localhost:11434"
     temperature: 0.8
     max_tokens: 2048
@@ -125,7 +125,7 @@ models:
   # Video Generation - LTX-2.3
   video:
     provider: "ltx"
-    model: "Lightricks/LTX-Video-2-3"
+    model: "Lightricks/LTX-Video"
     dtype: "bfloat16"
     enable_vae_slicing: true
     num_inference_steps: 30

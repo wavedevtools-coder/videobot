@@ -64,12 +64,11 @@ class StableAudioGenerator:
             return
 
         try:
-            from transformers import AutoProcessor, StableAudioSpectralDiffusionPipeline
+            from diffusers import StableAudioPipeline
 
             logger.info(f"Loading Stable Audio Open: {self.model_id}")
 
-            self._processor = AutoProcessor.from_pretrained(self.model_id)
-            self._model = StableAudioSpectralDiffusionPipeline.from_pretrained(
+            self._model = StableAudioPipeline.from_pretrained(
                 self.model_id,
                 torch_dtype=self.dtype,
             )
@@ -108,7 +107,7 @@ class StableAudioGenerator:
             audio = self._model(
                 prompt,
                 negative_prompt=negative_prompt,
-                audio_length_in_s=duration,
+                audio_end_in_s=duration,
                 num_inference_steps=self.num_steps,
                 guidance_scale=self.cfg_scale,
                 generator=generator,
