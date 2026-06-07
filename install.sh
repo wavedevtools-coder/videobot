@@ -21,8 +21,8 @@ fi
 
 # 1. System Dependencies
 echo -e "\n${GREEN}[1/6] Installing system dependencies...${NC}"
-apt-get update -qq
-apt-get install -y -qq \
+apt-get update -y
+apt-get install -y \
     python3-pip \
     python3-venv \
     ffmpeg \
@@ -31,8 +31,7 @@ apt-get install -y -qq \
     wget \
     build-essential \
     libgl1-mesa-glx \
-    libglib2.0-0 \
-    > /dev/null 2>&1 || echo "Note: Some system packages may already be installed"
+    libglib2.0-0
 
 # 2. Python Environment
 echo -e "\n${GREEN}[2/6] Setting up Python environment...${NC}"
@@ -41,7 +40,17 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
+rm -rf venv
 python3 -m venv venv
+
+# Bootstrap pip if it is missing (common in some minimal Debian/Ubuntu environments)
+if [ ! -f "venv/bin/pip" ]; then
+    echo "Warning: pip not found in virtual environment. Bootstrapping with get-pip.py..."
+    curl -sS https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+    ./venv/bin/python3 get-pip.py --quiet
+    rm -q get-pip.py 2>/dev/null || rm -f get-pip.py
+fi
+
 source venv/bin/activate
 
 # 3. Python Dependencies
