@@ -1,0 +1,48 @@
+# ============================================================
+# Tiny Dino AI Shorts Factory - Python Dependencies
+# For RTX 3090 24GB - Local AI Pipeline
+# ============================================================
+
+# Core
+pyyaml>=6.0
+requests>=2.31.0
+pillow>=10.0.0
+numpy>=1.24.0
+
+# AI/ML - PyTorch with CUDA 12.1
+# Install PyTorch first: https://pytorch.org/get-started/locally/
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+torch>=2.1.0
+torchvision>=0.16.0
+torchaudio>=2.1.0
+
+# Image Generation - FLUX.1 Dev via Diffusers
+diffusers>=0.25.0
+transformers>=4.36.0
+accelerate>=0.25.0
+safetensors>=0.4.0
+
+# Video Generation - LTX-Video
+# Uses diffusers (above)
+
+# Audio Generation - Stable Audio Open
+# Uses transformers (above)
+
+# Video Processing
+opencv-python>=4.8.0
+imageio>=2.31.0
+imageio-ffmpeg>=0.4.9
+
+# YouTube Upload
+google-auth>=2.22.0
+google-auth-oauthlib>=1.0.0
+google-auth-httplib2>=0.1.1
+google-api-python-client>=2.95.0
+
+# Optional: Faster video encoding
+# av>=10.0.0  # PyAV for faster video I/O
+
+# Development (optional)
+# pytest>=7.4.0
+# black>=23.0.0
+# pylint>=3.0.0
