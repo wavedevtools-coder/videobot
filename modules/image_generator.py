@@ -208,7 +208,8 @@ class FLUXImageGenerator:
             return prompt
         return (
             "Tiny Dino: small baby T-rex, bright lime-green body, light yellow belly, "
-            "large expressive eyes, cute chibi cartoon style, 3D Pixar render. "
+            "large expressive eyes, cute chibi cartoon style, 3D Pixar render, "
+            "centered in frame, bright well-lit scene. "
             + prompt
         )
 
