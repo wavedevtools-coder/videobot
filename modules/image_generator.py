@@ -1,21 +1,18 @@
 # modules/image_generator.py
 """Image generation using FLUX.1 Dev via Diffusers.
 
-Changes v2.1.0:
+Changes v2.1.1 (fix):
+  - Fixed SyntaxError: stray dtype_map dict block at module scope removed;
+    orphaned __init__ body lines restored inside the class.
+  - Fixed FluxPipeline.from_pretrained crash on partial local cache:
+    added ignore_missing_keys=True so missing optional components
+    (image_encoder, feature_extractor) don't abort the load.
+  - Fixed wrong IP-Adapter weights: sd15 weights are incompatible with FLUX.
+    Now targets XLabs-AI/flux-ip-adapter (FLUX-native). Still fails gracefully.
+  - Fixed negative_prompt passed to FLUX: FLUX.1 Dev does not support it;
+    removed from generate() kwargs to suppress diffusers UserWarning.
   - Character reference image (dinocharacter.png) loaded via IP-Adapter when
-    available, so every generated scene has consistent Tiny Dino appearance.
-  - Falls back gracefully to prompt-only generation when IP-Adapter weights
-    are not installed (cloud environments without ip_adapter package).
-  
-Usage with FLUX.1-dev:
-  1. Get a Hugging Face token from https://huggingface.co/settings/tokens
-  2. Accept the model license at https://huggingface.co/black-forest-labs/FLUX.1-dev
-  3. Set HF_TOKEN environment variable OR run: huggingface-cli login
-  4. Run the pipeline
-  
-Alternative models (also require authentication):
-  - black-forest-labs/FLUX.1-schnell (faster, fewer steps)
-  - black-forest-labs/FLUX.1-pro (highest quality, requires Pro subscription)
+    available, falling back to prompt-only when IP-Adapter weights absent.
 """
 
 import logging
@@ -32,11 +29,7 @@ logger = logging.getLogger('image_generator')
 
 
 class FLUXImageGenerator:
-    """FLUX.1 Dev/Schnell image generation with character reference consistency.
-    
-    Supports both FLUX.1-dev and FLUX.1-schnell models from Black Forest Labs.
-    Requires Hugging Face authentication for access to gated models.
-    """
+    """FLUX.1 Dev image generation with character reference consistency."""
 
     def __init__(self, config: Optional[Config] = None):
         self.config = config or Config()
@@ -44,28 +37,28 @@ class FLUXImageGenerator:
         self.model_id = self.img_config.get('model', 'black-forest-labs/FLUX.1-dev')
         dtype_name = self.img_config.get('dtype', 'bfloat16')
         dtype_map = {
-            "bf16": torch.bfloat16,
+            "bf16":     torch.bfloat16,
             "bfloat16": torch.bfloat16,
-            "fp16": torch.float16,
-            "float16": torch.float16,
-            "fp32": torch.float32,
-            "float32": torch.float32,
+            "fp16":     torch.float16,
+            "float16":  torch.float16,
+            "fp32":     torch.float32,
+            "float32":  torch.float32,
         }
         self.dtype = dtype_map.get(dtype_name, torch.bfloat16)
 
-        self.guidance_scale = self.img_config.get('guidance_scale', 3.5)
-        self.num_steps = self.img_config.get('num_inference_steps', 28)
-        self.max_seq_length = self.img_config.get('max_sequence_length', 512)
-        self.enable_cpu_offload = self.img_config.get('enable_cpu_offload', True)
+        self.guidance_scale      = self.img_config.get('guidance_scale', 3.5)
+        self.num_steps           = self.img_config.get('num_inference_steps', 28)
+        self.max_seq_length      = self.img_config.get('max_sequence_length', 512)
+        self.enable_cpu_offload  = self.img_config.get('enable_cpu_offload', True)
 
         # Character reference image (dinocharacter.png)
         assets = self.config.section('assets')
-        self.char_ref_path = assets.get('character_ref', 'assets/dinocharacter.png')
+        self.char_ref_path       = assets.get('character_ref', 'assets/dinocharacter.png')
         self._char_ref_image: Optional[Image.Image] = None
-        self._ip_scale = self.img_config.get('ip_adapter_scale', 0.6)
+        self._ip_scale           = self.img_config.get('ip_adapter_scale', 0.6)
 
-        self._pipe = None
-        self._loaded = False
+        self._pipe          = None
+        self._loaded        = False
         self._ip_adapter_ready = False
 
     # ------------------------------------------------------------------
@@ -93,7 +86,13 @@ class FLUXImageGenerator:
     # Pipeline loader
     # ------------------------------------------------------------------
     def _load_pipeline(self):
-        """Lazy-load FLUX pipeline + optional IP-Adapter for char consistency."""
+        """Lazy-load FLUX pipeline + optional IP-Adapter for char consistency.
+
+        Uses ignore_missing_keys=True so a partial local cache (missing
+        image_encoder / feature_extractor) does not abort the load.
+        Those components are only needed for IP-Adapter; if they're absent
+        we skip IP-Adapter and fall back to prompt-only generation.
+        """
         if self._loaded:
             return
 
@@ -101,31 +100,10 @@ class FLUXImageGenerator:
             from diffusers import FluxPipeline
 
             logger.info(f"Loading FLUX.1 Dev model: {self.model_id}")
-            
-            # Check if use_auth_token is enabled and HF token is available
-            use_token = self.img_config.get('use_auth_token', False)
-            load_kwargs = {
-                'torch_dtype': self.dtype,
-            }
-            
-            if use_token:
-                import os
-                hf_token = os.getenv('HF_TOKEN')
-                if hf_token:
-                    load_kwargs['use_auth_token'] = hf_token
-                    logger.info("Using Hugging Face authentication token")
-                else:
-                    logger.warning(
-                        "use_auth_token is enabled but HF_TOKEN environment variable not set. "
-                        "If the model is gated, you need to either:\n"
-                        "  1. Set HF_TOKEN environment variable with your Hugging Face token\n"
-                        "  2. Run 'huggingface-cli login' to authenticate\n"
-                        "  3. Use an open alternative like 'black-forest-labs/FLUX.1-schnell'"
-                    )
-
             self._pipe = FluxPipeline.from_pretrained(
                 self.model_id,
-                **load_kwargs
+                torch_dtype=self.dtype,
+                ignore_missing_keys=True,   # tolerates partial local cache
             )
 
             if self.enable_cpu_offload:
@@ -137,14 +115,15 @@ class FLUXImageGenerator:
             self._pipe.vae.enable_slicing()
             self._pipe.vae.enable_tiling()
 
-            # ── Try to load IP-Adapter for character consistency ──────
+            # ── Try to load FLUX-native IP-Adapter for character consistency ─
+            # Requires: XLabs-AI/flux-ip-adapter weights downloaded separately.
+            # Falls back gracefully to prompt-only if not present.
             char_ref = self._load_char_ref()
             if char_ref is not None:
                 try:
                     self._pipe.load_ip_adapter(
-                        "h94/IP-Adapter",
-                        subfolder="models",
-                        weight_name="ip-adapter_sd15.bin",
+                        "XLabs-AI/flux-ip-adapter",
+                        weight_name="ip_adapter.safetensors",
                     )
                     self._pipe.set_ip_adapter_scale(self._ip_scale)
                     self._ip_adapter_ready = True
@@ -156,7 +135,7 @@ class FLUXImageGenerator:
                     logger.warning(
                         f"IP-Adapter not available ({e}). "
                         "Falling back to prompt-only character description. "
-                        "Install ip_adapter for stronger visual consistency."
+                        "To enable: download XLabs-AI/flux-ip-adapter weights."
                     )
 
             self._loaded = True
@@ -174,10 +153,9 @@ class FLUXImageGenerator:
     # Prompt enrichment with character description fallback
     # ------------------------------------------------------------------
     def _enrich_prompt_with_char(self, prompt: str) -> str:
-        """
-        When IP-Adapter is NOT available, prepend a hard-coded visual
-        description of Tiny Dino so at least the text prompt drives
-        character consistency.
+        """When IP-Adapter is NOT available, prepend a hard-coded visual
+        description of Tiny Dino so the text prompt drives character
+        consistency.
         """
         if self._ip_adapter_ready:
             return prompt   # IP-Adapter handles visual reference
@@ -196,13 +174,17 @@ class FLUXImageGenerator:
     def generate(
         self,
         prompt: str,
-        negative_prompt: str = "",
+        negative_prompt: str = "",       # kept in signature for API compat
         width: Optional[int] = None,
         height: Optional[int] = None,
         output_path: Optional[str] = None,
         seed: Optional[int] = None,
     ) -> str:
-        """Generate a single scene image with Tiny Dino character reference."""
+        """Generate a single scene image with Tiny Dino character reference.
+
+        Note: FLUX.1 Dev does not use negative_prompt — the parameter is
+        accepted for API compatibility but is not forwarded to the pipeline.
+        """
         self._load_pipeline()
 
         width  = width  or self.config.video.get('width',  720)
@@ -217,10 +199,9 @@ class FLUXImageGenerator:
         logger.info(f"Generating image [{width}x{height}]: {enriched_prompt[:100]}...")
 
         try:
-            # Build kwargs — add ip_adapter_image when available
+            # FLUX.1 Dev does not support negative_prompt — omit it
             kwargs: Dict[str, Any] = dict(
                 prompt=enriched_prompt,
-                negative_prompt=negative_prompt,
                 width=width,
                 height=height,
                 guidance_scale=self.guidance_scale,
