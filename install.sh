@@ -68,10 +68,22 @@ else
     echo "Ollama already installed"
 fi
 
-# Start Ollama service
-echo "Starting Ollama service..."
-ollama serve > /var/log/ollama.log 2>&1 &
-sleep 5
+# Start Ollama service (only if not already running)
+echo "Checking Ollama service..."
+if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
+    echo "Ollama already running"
+else
+    echo "Starting Ollama service..."
+    ollama serve > /var/log/ollama.log 2>&1 &
+    # Wait until Ollama is actually ready (up to 30s)
+    for i in $(seq 1 30); do
+        if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
+            echo "Ollama ready after ${i}s"
+            break
+        fi
+        sleep 1
+    done
+fi
 
 # Pull required model
 echo "Pulling qwen3:14b model (~9GB)..."
