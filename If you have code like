@@ -1,0 +1,2 @@
+from transformers import AutoModel
+model = AutoModel.from_pretrained("black-forest-labs/FLUX.1-schnell")

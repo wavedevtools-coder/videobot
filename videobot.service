@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# VideoBot Systemd Service File
+# Place this file at /etc/systemd/system/videobot.service
+
+[Unit]
+Description=VideoBot AI Video Generation Service
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/videobot
+Environment="PATH=/opt/videobot/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="HF_HOME=/tmp/huggingface"
+Environment="OLLAMA_HOST=127.0.0.1:11434"
+
+# Run the pipeline every 30 minutes (adjust as needed)
+ExecStart=/bin/bash -c 'source venv/bin/activate && python main.py'
+Restart=on-failure
+RestartSec=60
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=videobot
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/videobot/outputs /opt/videobot/logs
+
+[Install]
+WantedBy=multi-user.target

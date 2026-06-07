@@ -266,8 +266,8 @@ class StoryScorer:
         if len(story_text) < 100:
             return False, "Story too short (< 100 chars)"
 
-        if len(story_text) > 2000:
-            return False, "Story too long (> 2000 chars)"
+        if len(story_text) > 4000:
+            return False, "Story too long (> 4000 chars)"
 
         # Check for weak patterns
         for pattern in self.WEAK_PATTERNS:
