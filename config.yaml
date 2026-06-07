@@ -93,16 +93,17 @@ models:
   # LLM via Ollama
   llm:
     provider: "ollama"
-    model: "qwen3:14b"
+    model: "qwen3-coder:30b"
     base_url: "http://localhost:11434"
     temperature: 0.8
     max_tokens: 2048
+    timeout: 180
 
-  # Image Generation - FLUX.1 Dev via Diffusers
+  # Image Generation - FLUX.1 Schnell (open access, no login required)
   image:
     provider: "diffusers"
-    model: "black-forest-labs/FLUX.1-dev"
-    dtype: "bfloat16"
+    model: "black-forest-labs/FLUX.1-schnell"
+    dtype: "float16"
     enable_cpu_offload: true
     guidance_scale: 3.5
     num_inference_steps: 28
