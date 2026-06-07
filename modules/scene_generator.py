@@ -124,7 +124,7 @@ class ScenePromptBuilder:
             f"{style}. "
             f"Consistent character appearance throughout, fluid natural movement, "
             f"stable camera, well-lit colorful scene stays visible, "
-            f"3D Pixar cartoon style, vertical 9:16, no fade to black"
+            f"3D Pixar cartoon style, vertical 9:16, masterpiece, ultra-high resolution, extremely detailed, sharp focus, 8K, highly clear, no fade to black"
         )
 
         return {

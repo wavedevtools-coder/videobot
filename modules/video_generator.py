@@ -11,10 +11,10 @@ from .config_loader import Config
 
 logger = logging.getLogger('video_generator')
 
-# LTX requires num_frames = 8n + 1 (e.g. 121, 145, 153)
 DEFAULT_VIDEO_NEGATIVE = (
     "fade to black, darkening, black frames, static freeze, flickering, "
-    "glitch, blur, inconsistent motion, morphing, distortion, jittery, low quality"
+    "glitch, blur, blurry, low resolution, noisy, inconsistent motion, morphing, "
+    "distortion, jittery, low quality, pixelated, artifacts, washed out, out of focus"
 )
 
 
@@ -33,7 +33,8 @@ class LTXVideoGenerator:
         self.vid_config = self.config.models.get('video', {})
         self.model_id = self.vid_config.get('model', 'Lightricks/LTX-Video-2-3')
         self.dtype = getattr(torch, self.vid_config.get('dtype', 'bfloat16'))
-        self.num_steps = self.vid_config.get('num_inference_steps', 30)
+        self.num_steps = self.config.video.get('num_inference_steps', 40)  # Increased from 30 for clarity
+        self.guidance_scale = self.config.video.get('guidance_scale', 3.0)
         self.enable_vae_slicing = self.vid_config.get('enable_vae_slicing', True)
 
         self._pipe = None
@@ -114,6 +115,7 @@ class LTXVideoGenerator:
                 prompt=prompt,
                 negative_prompt=neg,
                 num_inference_steps=self.num_steps,
+                guidance_scale=self.guidance_scale,
                 num_frames=num_frames,
                 width=gen_w,
                 height=gen_h,
