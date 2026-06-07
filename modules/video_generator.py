@@ -40,7 +40,7 @@ class LTXVideoGenerator:
                 self.model_id,
                 torch_dtype=self.dtype,
             )
-            self._pipe = self._pipe.to("cuda")
+            self._pipe.enable_model_cpu_offload()
 
             if self.enable_vae_slicing:
                 self._pipe.vae.enable_slicing()
@@ -79,6 +79,7 @@ class LTXVideoGenerator:
             generator = torch.Generator("cuda").manual_seed(seed)
 
         logger.info(f"Generating video from: {image_path}")
+        torch.cuda.empty_cache()
 
         try:
             from PIL import Image
