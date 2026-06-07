@@ -74,8 +74,8 @@ ollama serve > /var/log/ollama.log 2>&1 &
 sleep 5
 
 # Pull required model
-echo "Pulling qwen2.5-coder:14b model..."
-ollama pull qwen2.5-coder:14b
+echo "Pulling qwen3:14b model (~9GB)..."
+ollama pull qwen3:14b
 echo -e "${GREEN}✓ Ollama ready${NC}"
 
 # 5. Download Models (Pre-warm cache)
