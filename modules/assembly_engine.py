@@ -253,14 +253,20 @@ class AssemblyEngine:
             last_video = 'withoutro'
 
         # Step 3: title overlay (optional)
+        # NOTE: apostrophes in filter_complex text= values break FFmpeg's parser.
+        # We strip them and split drawtext + fade into separate filter steps.
         if title:
-            title_esc = title.replace("'", "\\'")
+            # Remove characters that break FFmpeg filter_complex string parsing
+            title_safe = title.replace("'", "").replace('"', '').replace('\\', '')
             filter_parts.append(
-                f'[{last_video}]drawtext=text=\'{title_esc}\':'
+                f'[{last_video}]drawtext='
+                f'text={title_safe}:'
                 f'fontcolor=white:fontsize=48:'
                 f'x=(w-text_w)/2:y=(h-text_h)/2:'
-                f'box=1:boxcolor=black@0.5:boxborderw=10,'
-                f'fade=t=out:st=1.5:d=0.5[titled]'
+                f'box=1:boxcolor=black@0.5:boxborderw=10[title_drawn]'
+            )
+            filter_parts.append(
+                f'[title_drawn]fade=t=out:start_time=1.5:duration=0.5[titled]'
             )
             last_video = 'titled'
 
