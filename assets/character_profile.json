@@ -1,0 +1,74 @@
+{
+  "name": "Tiny Dino",
+  "version": "1.0",
+  "description": "A small, curious, and playful baby dinosaur who explores the world with wide-eyed wonder.",
+  "appearance": {
+    "species": "baby tyrannosaurus rex",
+    "size": "small - roughly the size of a golden retriever puppy",
+    "color": {
+      "primary": "bright green",
+      "hex": "#39FF14"
+    },
+    "belly": {
+      "color": "light yellow",
+      "hex": "#FFFACD",
+      "pattern": "smooth rounded"
+    },
+    "eyes": {
+      "description": "large expressive round eyes",
+      "color": "big black pupils with white sparkle highlights",
+      "expression": "curious, innocent, easily amazed"
+    },
+    "teeth": "tiny rounded nubs - not scary at all",
+    "tail": "short stubby tail that wags when happy",
+    "arms": "very small arms that flail when excited",
+    "legs": "short chubby legs, slightly wobbly when walking",
+    "skin_texture": "smooth with subtle scales, slightly glossy",
+    "features": [
+      "round chubby body",
+      "oversized head relative to body",
+      "tiny nostrils that flare when curious",
+      "soft rounded spikes along back"
+    ]
+  },
+  "personality": {
+    "traits": ["curious", "playful", "brave", "clumsy", "optimistic", "friendly"],
+    "voice_description": "high-pitched squeaks, chirps, and happy roars - no human language",
+    "communication": "expressive body language, eye expressions, vocalizations",
+    "humor_style": "physical comedy, unexpected reactions, over-the-top expressions, slapstick",
+    "fears": ["sudden loud noises", "being alone", "vegetables"],
+    "loves": ["chasing butterflies", "splashing in puddles", "shiny objects", "hugs", "napping in sunbeams"],
+    "catchphrase_sounds": ["happy chirp-roar", "confused head-tilt squeak", "excited tail-wag rumble"]
+  },
+  "behavior_rules": {
+    "always": [
+      "Maintain childlike innocence",
+      "React with oversized emotions",
+      "Learn simple lessons from mistakes",
+      "Show kindness to all creatures"
+    ],
+    "never": [
+      "Use human language",
+      "Be intentionally mean",
+      "Look scary or threatening",
+      "Break the 4th wall directly"
+    ]
+  },
+  "prompt_presets": {
+    "base_description": "Tiny Dino, a small baby tyrannosaurus rex, bright green body with light yellow belly, large expressive round eyes with sparkle highlights, tiny rounded teeth, short stubby tail, small chubby arms, smooth glossy skin with subtle scales and soft rounded spikes along back, cute and adorable, cartoon style, high quality 3D render",
+    "style_modifiers": {
+      "default": "3D Pixar-style animation, soft lighting, vibrant colors, 720x1280 vertical format",
+      "action": "dynamic pose, motion blur, energetic",
+      "emotional": "exaggerated facial expression, close-up on face",
+      "environment": "rich detailed background, depth of field"
+    },
+    "mood_modifiers": {
+      "happy": "jumping with joy, tail wagging, eyes sparkling",
+      "curious": "head tilted, leaning forward, nose sniffing",
+      "scared": "trembling, wide eyes, hiding behind object",
+      "surprised": "jaw dropped, eyes bulging, frozen in place",
+      "silly": "goofy grin, crossed eyes, playful stance",
+      "sleepy": "droopy eyes, yawning, curled up"
+    }
+  }
+}
