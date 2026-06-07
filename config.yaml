@@ -92,7 +92,7 @@ models:
   # LLM via Ollama
   llm:
     provider: "ollama"
-    model: "qwen2.5-coder:32b"
+    model: "qwen2.5-coder:14b"
     base_url: "http://localhost:11434"
     temperature: 0.8
     max_tokens: 2048
