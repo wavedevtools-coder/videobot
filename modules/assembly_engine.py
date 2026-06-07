@@ -312,7 +312,7 @@ class AssemblyEngine:
             )
             filter_parts.append(
                 f'[{last_video}][wm_scaled]overlay='
-                f'x=W-w-{margin}:y=H-h-{margin}:format=auto[watermarked]'
+                f'x=W-w-{margin}:y=H-h-{margin}:format=auto:shortest=1[watermarked]'
             )
             last_video = 'watermarked'
 
