@@ -21,7 +21,6 @@ class LTXVideoGenerator:
         self.model_id = self.vid_config.get('model', 'Lightricks/LTX-Video-2-3')
         self.dtype = getattr(torch, self.vid_config.get('dtype', 'bfloat16'))
         self.num_steps = self.vid_config.get('num_inference_steps', 30)
-        self.motion_bucket_id = self.vid_config.get('motion_bucket_id', 127)
         self.enable_vae_slicing = self.vid_config.get('enable_vae_slicing', True)
 
         self._pipe = None
@@ -47,8 +46,10 @@ class LTXVideoGenerator:
                 self._pipe.vae.enable_slicing()
                 logger.info("Enabled VAE slicing for memory savings")
 
-            # Additional memory optimization
-            self._pipe.enable_vae_tiling()
+            # Additional memory optimization (call on VAE sub-component)
+            if hasattr(self._pipe.vae, 'enable_tiling'):
+                self._pipe.vae.enable_tiling()
+                logger.info("Enabled VAE tiling for memory savings")
 
             self._loaded = True
             logger.info("LTX-2.3 pipeline loaded successfully")
@@ -84,13 +85,14 @@ class LTXVideoGenerator:
 
             image = Image.open(image_path).convert("RGB")
 
+            width, height = image.size  # PIL gives (w, h)
             result = self._pipe(
                 image=image,
                 prompt=prompt,
                 num_inference_steps=self.num_steps,
                 num_frames=num_frames,
-                frames_per_second=fps,
-                motion_bucket_id=self.motion_bucket_id,
+                width=width,
+                height=height,
                 generator=generator,
             )
 
