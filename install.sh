@@ -65,8 +65,8 @@ ollama serve > /var/log/ollama.log 2>&1 &
 sleep 5
 
 # Pull required model
-echo "Pulling llama3.2 model..."
-ollama pull llama3.2 > /dev/null 2>&1
+echo "Pulling qwen3-coder:30b model..."
+ollama pull qwen3-coder:30b > /dev/null 2>&1
 echo -e "${GREEN}✓ Ollama ready${NC}"
 
 # 5. Download Models (Pre-warm cache)
