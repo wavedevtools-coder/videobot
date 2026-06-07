@@ -244,7 +244,7 @@ class AssemblyEngine:
             inputs.extend(['-i', _ffmpeg_path(sv)])
 
         if audio_path and os.path.exists(audio_path):
-            inputs.extend(['-i', _ffmpeg_path(audio_path)])
+            inputs.extend(['-stream_loop', '-1', '-i', _ffmpeg_path(audio_path)])
             audio_idx = len(scene_videos)
         else:
             audio_idx = None
@@ -257,7 +257,7 @@ class AssemblyEngine:
 
         # Watermark gets its own input index
         if use_watermark:
-            inputs.extend(['-i', _ffmpeg_path(watermark_path)])
+            inputs.extend(['-loop', '1', '-i', _ffmpeg_path(watermark_path)])
             wm_idx = len(scene_videos) \
                    + (1 if audio_idx is not None else 0) \
                    + (1 if outro_idx is not None else 0)
@@ -317,40 +317,21 @@ class AssemblyEngine:
             last_video = 'watermarked'
 
         # ── audio chain ───────────────────────────────────────────────
-        # Real audio: loop it to cover the full video length
         if audio_idx is not None:
-            filter_parts.append(
-                f'[{audio_idx}:a:0]aloop=loop=-1:size=2e+09[audio]'
-            )
-            last_audio = 'audio'
-            silence_input = None
+            last_audio = f'{audio_idx}:a:0'
         else:
-            # No audio file — inject a silent anullsrc as a lavfi input.
-            # aevalsrc in filter_complex only generated 1 s of silence which
-            # caused -shortest to cut the whole video to 1 second.
-            silence_input = ['-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo']
-            # anullsrc is the last input; add its index after scene/outro/wm inputs
-            silence_idx = len(scene_videos) \
-                        + (1 if audio_idx is not None else 0) \
-                        + (1 if outro_idx is not None else 0) \
-                        + (1 if wm_idx is not None else 0)
-            filter_parts.append(
-                f'[{silence_idx}:a]aresample=44100[silence]'
-            )
-            last_audio = 'silence'
+            last_audio = None
 
         # ── assemble command ──────────────────────────────────────────
         cmd = ['ffmpeg', '-y']
         cmd.extend(inputs)
-        # Insert the lavfi silence input BEFORE filter_complex (after real inputs)
-        if silence_input:
-            cmd.extend(silence_input)
 
         if filter_parts:
             cmd.extend(['-filter_complex', ';'.join(filter_parts)])
 
         cmd.extend(['-map', f'[{last_video}]'])
-        cmd.extend(['-map', f'[{last_audio}]'])
+        if last_audio:
+            cmd.extend(['-map', last_audio])
 
         cmd.extend([
             '-c:v', 'libx264',
@@ -359,9 +340,16 @@ class AssemblyEngine:
             '-r', str(fps),
             '-s', f'{w}x{h}',
             '-pix_fmt', 'yuv420p',
-            '-c:a', 'aac',
-            '-b:a', '192k',
-            '-ar', '44100',
+        ])
+        
+        if last_audio:
+            cmd.extend([
+                '-c:a', 'aac',
+                '-b:a', '192k',
+                '-ar', '44100',
+            ])
+
+        cmd.extend([
             '-shortest',
             '-movflags', '+faststart',
             _ffmpeg_path(output_path),
