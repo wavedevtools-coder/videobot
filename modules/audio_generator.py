@@ -53,6 +53,12 @@ class StableAudioGenerator:
         self.audio_length = self.audio_config.get('audio_length', 8.0)
         self.num_steps = self.audio_config.get('num_inference_steps', 20)
         self.cfg_scale = self.audio_config.get('cfg_scale', 7.0)
+        self.hf_token = (
+            self.audio_config.get('hf_token', '')
+            or self.config.models.get('image', {}).get('hf_token', '')
+            or os.environ.get('HF_TOKEN', '')
+            or os.environ.get('HUGGING_FACE_HUB_TOKEN', '')
+        ).strip() or None
 
         self._model = None
         self._processor = None
@@ -68,9 +74,13 @@ class StableAudioGenerator:
 
             logger.info(f"Loading Stable Audio Open: {self.model_id}")
 
+            load_kwargs = dict(torch_dtype=self.dtype)
+            if self.hf_token:
+                load_kwargs['token'] = self.hf_token
+
             self._model = StableAudioPipeline.from_pretrained(
                 self.model_id,
-                torch_dtype=self.dtype,
+                **load_kwargs,
             )
             self._model = self._model.to("cuda")
 
@@ -83,6 +93,18 @@ class StableAudioGenerator:
                 "pip install transformers torchaudio"
             )
         except Exception as e:
+            err = str(e)
+            if "401" in err or "Unauthorized" in err or "gated" in err.lower():
+                raise RuntimeError(
+                    f"Model '{self.model_id}' requires a HuggingFace token.\n\n"
+                    "Fix options:\n"
+                    "  A) Accept the model license at https://huggingface.co/"
+                    f"{self.model_id}\n"
+                    "  B) Add your HF token to config.yaml:\n"
+                    "       models.audio.hf_token: hf_xxxxxxxxxxxx\n"
+                    "  C) Run once in terminal: huggingface-cli login\n\n"
+                    f"Original error: {e}"
+                )
             raise RuntimeError(f"Failed to load Stable Audio: {e}")
 
     def generate(
@@ -257,6 +279,18 @@ class StableAudioGenerator:
     ) -> list:
         """Generate individual SFX clips for each scene."""
         os.makedirs(output_dir, exist_ok=True)
+
+        try:
+            self._load_model()
+        except Exception as e:
+            logger.warning(
+                "Audio model unavailable — continuing without sound effects. "
+                "Accept the model license at huggingface.co/stabilityai/stable-audio-open-1.0 "
+                "then set models.audio.hf_token or run: huggingface-cli login. "
+                f"({e})"
+            )
+            return [None] * len(scenes)
+
         sfx_paths = []
 
         for i, scene in enumerate(scenes):

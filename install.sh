@@ -57,6 +57,7 @@ source venv/bin/activate
 echo -e "\n${GREEN}[3/6] Installing Python dependencies...${NC}"
 ./venv/bin/pip install --upgrade pip -q
 ./venv/bin/pip install -r requirements.txt -q
+./venv/bin/pip install tiktoken sentencepiece -q
 
 # 4. Ollama Installation (Optional but recommended)
 echo -e "\n${GREEN}[4/6] Setting up Ollama...${NC}"

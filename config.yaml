@@ -139,6 +139,8 @@ models:
     audio_length: 8.0       # seconds
     num_inference_steps: 20
     cfg_scale: 7.0
+    hf_token: ""             # gated model — accept license at huggingface.co first
+                              # or run: huggingface-cli login
 
 # ------------------------------------------------------------
 # Asset Management
