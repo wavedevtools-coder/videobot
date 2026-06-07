@@ -23,6 +23,8 @@ fi
 echo -e "\n${GREEN}[1/6] Installing system dependencies...${NC}"
 apt-get update -qq
 apt-get install -y -qq \
+    python3-pip \
+    python3-venv \
     ffmpeg \
     git \
     curl \
@@ -44,8 +46,8 @@ source venv/bin/activate
 
 # 3. Python Dependencies
 echo -e "\n${GREEN}[3/6] Installing Python dependencies...${NC}"
-pip install --upgrade pip -q
-pip install -r requirements.txt -q
+./venv/bin/pip install --upgrade pip -q
+./venv/bin/pip install -r requirements.txt -q
 
 # 4. Ollama Installation (Optional but recommended)
 echo -e "\n${GREEN}[4/6] Setting up Ollama...${NC}"
@@ -71,7 +73,7 @@ echo -e "${GREEN}✓ Ollama ready${NC}"
 echo -e "\n${GREEN}[5/6] Pre-downloading AI models...${NC}"
 echo "This may take 10-20 minutes depending on your connection..."
 
-python3 << 'EOF'
+./venv/bin/python3 << 'EOF'
 import os
 os.environ['HF_HOME'] = '/tmp/huggingface'
 
