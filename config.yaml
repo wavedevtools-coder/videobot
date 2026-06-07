@@ -2,7 +2,7 @@
 # Tiny Dino AI Shorts Factory - Configuration v2.0.2
 # ============================================================
 
-project_root: "D:/dino"
+project_root: "/workspace/dino"
 
 # ------------------------------------------------------------
 # Video Settings (9:16 Vertical for Shorts/Reels/TikTok)

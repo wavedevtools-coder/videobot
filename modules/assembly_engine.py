@@ -129,18 +129,22 @@ class AssemblyEngine:
         logger.info(f"Generating outro from reference image: {outro_ref}")
 
         # Scale + pad the reference image to fill 9:16 frame
+        # NOTE: use long-form fade params (start_time/duration) — some FFmpeg
+        # builds reject the short forms st= and d= on certain filter chains.
+        # Strip emoji from drawtext — headless Linux containers often lack emoji fonts.
         vf = (
             f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
             f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color=black,"
-            f"drawtext=text='Subscribe for more Tiny Dino\\! 🦕':"
+            f"drawtext=text='Subscribe for more Tiny Dino':"
             f"fontcolor=white:fontsize=44:"
             f"x=(w-text_w)/2:y=h*0.82:"
             f"box=1:boxcolor=black@0.45:boxborderw=12,"
-            f"fade=t=in:st=0:d=0.5,"
-            f"fade=t=out:st={duration - 0.6}:d=0.5"
+            f"fade=t=in:start_time=0:duration=0.5,"
+            f"fade=t=out:start_time={duration - 0.6}:duration=0.5"
         )
 
-        os.makedirs(os.path.dirname(os.path.abspath(outro_video)), exist_ok=True)
+        outro_dir = os.path.dirname(_ffmpeg_path(outro_video))
+        os.makedirs(outro_dir, exist_ok=True)
 
         cmd = [
             'ffmpeg', '-y',
@@ -445,8 +449,8 @@ class AssemblyEngine:
             f"drawtext=text='Subscribe for more Tiny Dino!':"
             f"fontcolor=0xFFFACD:fontsize=36:x=(w-text_w)/2:y=(h-text_h)/2+50:"
             f"box=1:boxcolor=black@0.3:boxborderw=8,"
-            f"fade=t=in:st=0:d=0.5,"
-            f"fade=t=out:st={duration-0.5}:d=0.5"
+            f"fade=t=in:start_time=0:duration=0.5,"
+            f"fade=t=out:start_time={duration-0.5}:duration=0.5"
         )
 
         cmd = [
