@@ -3,32 +3,32 @@
   "version": "1.0",
   "description": "A small, curious, and playful baby dinosaur who explores the world with wide-eyed wonder.",
   "appearance": {
-    "species": "baby tyrannosaurus rex",
+    "species": "baby dinosaur",
     "size": "small - roughly the size of a golden retriever puppy",
     "color": {
-      "primary": "bright green",
+      "primary": "vibrant lime green",
       "hex": "#39FF14"
     },
     "belly": {
-      "color": "light yellow",
+      "color": "smooth yellow",
       "hex": "#FFFACD",
-      "pattern": "smooth rounded"
+      "pattern": "solid yellow extending from the belly all the way up the front of the thin neck to the chin"
     },
     "eyes": {
-      "description": "large expressive round eyes",
-      "color": "big black pupils with white sparkle highlights",
-      "expression": "curious, innocent, easily amazed"
+      "description": "huge expressive round eyes with bright green irises",
+      "color": "bright green irises, big black pupils, and bright white sparkle highlights",
+      "expression": "curious, innocent, extremely friendly"
     },
-    "teeth": "tiny rounded nubs - not scary at all",
-    "tail": "short stubby tail that wags when happy",
-    "arms": "very small arms that flail when excited",
-    "legs": "short chubby legs, slightly wobbly when walking",
-    "skin_texture": "smooth with subtle scales, slightly glossy",
+    "teeth": "small white teeth in a wide, friendly, curvy smile",
+    "tail": "short stubby green tail",
+    "arms": "tiny T-rex arms with little fingers",
+    "legs": "short chubby legs with small rounded toes",
+    "skin_texture": "smooth, matte clay-like 3D texture, Pixar style",
     "features": [
-      "round chubby body",
-      "oversized head relative to body",
-      "tiny nostrils that flare when curious",
-      "soft rounded spikes along back"
+      "oversized head with a wide jaw",
+      "thin curvy neck",
+      "small green spikes running from the top of the head down the back to the tail",
+      "round chubby body"
     ]
   },
   "personality": {
@@ -55,12 +55,12 @@
     ]
   },
   "prompt_presets": {
-    "base_description": "Tiny Dino, a small baby tyrannosaurus rex, bright green body with light yellow belly, large expressive round eyes with sparkle highlights, tiny rounded teeth, short stubby tail, small chubby arms, smooth glossy skin with subtle scales and soft rounded spikes along back, cute and adorable, cartoon style, high quality 3D render",
+    "base_description": "Tiny Dino, an adorable 3D Pixar-style cartoon baby dinosaur. Vibrant lime green body with a smooth yellow belly that extends up the front of a thin curvy neck to the chin. Huge expressive round eyes with bright green irises and white sparkle highlights. Wide friendly smile showing small white teeth. Tiny T-rex arms and short chubby legs with small toes. A row of small green spikes runs from the top of the oversized head down the back to a short stubby tail. Smooth, matte clay-like 3D skin texture, masterpiece, highly detailed cute character design",
     "style_modifiers": {
-      "default": "3D Pixar-style animation, soft lighting, vibrant colors, 720x1280 vertical format",
-      "action": "dynamic pose, motion blur, energetic",
-      "emotional": "exaggerated facial expression, close-up on face",
-      "environment": "rich detailed background, depth of field"
+      "default": "3D Pixar-style animation, soft studio lighting, vibrant colors, clean green background",
+      "action": "dynamic pose, motion blur, energetic, cinematic lighting",
+      "emotional": "exaggerated facial expression, close-up on face, expressive",
+      "environment": "rich detailed background, depth of field, stunning environment"
     },
     "mood_modifiers": {
       "happy": "jumping with joy, tail wagging, eyes sparkling",

@@ -117,7 +117,8 @@ class ScenePromptBuilder:
         style = self.STYLE_PRESETS.get(mood, self.STYLE_PRESETS['curious'])
 
         prompt = (
-            f"Smooth cinematic animation of Tiny Dino, baby green T-rex with yellow belly. "
+            f"Smooth cinematic animation of Tiny Dino, an adorable vibrant lime green 3D Pixar-style baby dinosaur. "
+            f"He has a smooth yellow belly running up to his chin, huge round eyes with bright green irises, and a wide friendly smile. "
             f"Scene: {description}. "
             f"Motion: {motion}. "
             f"{style}. "
