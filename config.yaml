@@ -99,22 +99,19 @@ models:
     max_tokens: 2048
     timeout: 180
 
-  # Image Generation - FLUX.1 Dev (requires Hugging Face authentication)
-  # To use this model, you must authenticate with Hugging Face:
-  #   1. Get a token from https://huggingface.co/settings/tokens
-  #   2. Accept the model license at https://huggingface.co/black-forest-labs/FLUX.1-dev
-  #   3. Set HF_TOKEN environment variable or run: huggingface-cli login
-  # Alternative: Use 'black-forest-labs/FLUX.1-schnell' for faster inference (also requires auth)
+  # Image Generation - FLUX.1 Schnell (Apache 2.0 - Commercial Use Allowed)
+  # Best for YouTube monetization: Free, fast (4 steps), high quality, commercial-friendly
+  # Alternative: 'black-forest-labs/FLUX.1-dev' (Non-commercial license, higher quality but slower)
   image:
     provider: "diffusers"
-    model: "black-forest-labs/FLUX.1-dev"
+    model: "black-forest-labs/FLUX.1-schnell"
     dtype: "bfloat16"
     enable_cpu_offload: true
-    guidance_scale: 3.5
-    num_inference_steps: 28
+    guidance_scale: 0.0           # Ignored by schnell, used by dev (~3.5)
+    num_inference_steps: 4        # Optimal for schnell (dev uses 20-28)
     max_sequence_length: 512
     ip_adapter_scale: 0.6         # 0.0 = ignore ref, 1.0 = copy ref; 0.6 balances story+character
-    use_auth_token: true          # Required for gated FLUX models
+    use_auth_token: false         # Schnell doesn't require auth (Dev does)
 
   # Video Generation - LTX-2.3
   video:
