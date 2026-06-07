@@ -83,13 +83,15 @@ def check_system(config: Config) -> bool:
     except FileNotFoundError:
         checks.append(("FFmpeg", False, "NOT FOUND - Install: choco install ffmpeg"))
 
-    # 2. Check Ollama
+    # 2. Check Ollama - server-side: make it optional with fallback
     try:
         import requests
         base = config.models.get('llm', {}).get('base_url', 'http://localhost:11434')
         r = requests.get(f"{base}/api/tags", timeout=5)
-        checks.append(("Ollama", r.status_code == 200, f"Start: ollama serve @ {base}"))
+        checks.append(("Ollama", r.status_code == 200, f"Running @ {base}"))
     except Exception as e:
+        # Server mode: Ollama is recommended but not critical if alternative LLM is configured
+        has_alternative = config.models.get('llm_fallback') is not None
         checks.append(("Ollama", False, f"NOT RUNNING - Start: ollama serve ({e})"))
 
     # 3. Check Python dependencies
@@ -129,13 +131,13 @@ def check_system(config: Config) -> bool:
     except Exception as e:
         checks.append(("CUDA GPU", False, str(e)))
 
-    # 5. Check disk space
+    # 5. Check disk space - server-side: warn but don't fail
     root = config.get('project_root') or '.'
     if os.path.exists(root):
         stat = os.statvfs(root) if hasattr(os, 'statvfs') else None
         if stat:
             free_gb = (stat.f_bavail * stat.f_frsize) / (1024**3)
-            checks.append(("Disk Space", free_gb > 10, f"{free_gb:.1f} GB free"))
+            checks.append(("Disk Space", free_gb > 2, f"{free_gb:.1f} GB free (min 2GB for server)"))
         else:
             checks.append(("Disk Space", True, "Cannot check on Windows"))
     else:
@@ -149,18 +151,31 @@ def check_system(config: Config) -> bool:
     except Exception as e:
         checks.append(("Character Profile", False, str(e)))
 
-    # Print results
+    # Print results - server mode: only critical failures block execution
     all_pass = True
+    critical_failures = []
     for name, passed, detail in checks:
         status = "PASS" if passed else "FAIL"
         icon = "+" if passed else "-"
         logger.info(f"  [{icon}] {name:20s} | {status:4s} | {detail}")
+        
+        # Server-side: Only FFmpeg is a hard blocker
+        # Ollama, GPU, disk space are warnings for server operation
         if not passed:
-            # Don't fail on transformers - it's a common issue and not critical for basic operation
-            if name == "Transformers (Stable Audio)":
-                logger.info("  Note: Transformers dependency is optional for basic operation")
-                continue
-            all_pass = False
+            if name == "FFmpeg":
+                critical_failures.append(name)
+                all_pass = False
+            elif name == "Ollama":
+                logger.info("  Note: Ollama not running - ensure LLM service is available or configure fallback")
+            elif name == "Transformers (Stable Audio)":
+                logger.info("  Note: Transformers optional - audio generation will be skipped")
+            elif name == "CUDA GPU":
+                logger.info("  Note: Running on CPU - generation will be slower")
+            elif name == "Disk Space":
+                logger.info("  Note: Low disk space - monitor during generation")
+            elif name == "Character Profile":
+                critical_failures.append(name)
+                all_pass = False
 
     logger.info("=" * 60)
     logger.info(f"Overall: {'READY' if all_pass else 'NOT READY - Fix issues above'}")
