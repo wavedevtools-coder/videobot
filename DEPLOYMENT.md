@@ -21,7 +21,7 @@ cd videobot
 ### 2. Install System Dependencies
 ```bash
 sudo apt-get update
-sudo apt-get install -y ffmpeg git curl wget build-essential libgl1-mesa-glx libglib2.0-0
+sudo apt-get install -y ffmpeg git curl wget build-essential libgl1 libglib2.0-0
 ```
 
 ### 3. Setup Python Environment

@@ -30,7 +30,7 @@ apt-get install -y \
     curl \
     wget \
     build-essential \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0
 
 # 2. Python Environment
