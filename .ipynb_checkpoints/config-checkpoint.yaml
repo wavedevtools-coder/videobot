@@ -1,0 +1,150 @@
+# ============================================================
+# Tiny Dino AI Shorts Factory - Configuration v2.0.1
+# Approved for Implementation
+# ============================================================
+
+project_root: "D:/dino"
+
+# ------------------------------------------------------------
+# Video Settings (9:16 Vertical for Shorts/Reels/TikTok)
+# ------------------------------------------------------------
+video:
+  width: 720
+  height: 1280
+  fps: 30
+  scene_duration: 5        # seconds per scene
+  outro_duration: 4        # seconds for outro
+  total_scenes: 6          # typical story arc scenes
+  output_format: "mp4"
+  codec: "libx264"
+  crf: 23                  # quality (lower = better, 18-28 range)
+  preset: "medium"         # encoding speed preset
+
+# ------------------------------------------------------------
+# Generation Settings
+# ------------------------------------------------------------
+generation:
+  videos_per_run: 1
+  max_retry: 3
+  save_after_each_video: true
+  parallel_scenes: 1       # RTX 3090 24GB safe default
+  temp_cleanup: true       # clean temp files after successful assembly
+
+# ------------------------------------------------------------
+# Quality Thresholds
+# ------------------------------------------------------------
+quality:
+  min_story_score: 70      # reject stories below this
+  min_scene_score: 65
+  max_regenerations: 3     # max retries for a single story
+  require_strong_hook: true
+  require_visual_clarity: true
+
+# ------------------------------------------------------------
+# Budget Control (INR)
+# ------------------------------------------------------------
+budget:
+  monthly_budget_inr: 1000
+  stop_when_exceeded: true
+  cost_per_video_estimate_inr: 15
+  warning_threshold_percent: 80
+  track_gpu_minutes: true
+
+# ------------------------------------------------------------
+# Upload Configuration
+# ------------------------------------------------------------
+upload:
+  enabled: true
+  videos_per_day: 1
+  upload_times:
+    - "18:00"
+  platforms:
+    - youtube
+    # - instagram  # future
+    # - tiktok     # future
+  title_template: "Tiny Dino {episode} - {story_title}"
+  description_template: |
+    Tiny Dino Adventures - Episode {episode}
+    
+    {story_summary}
+    
+    #tinydino #dinosaur #animation #cartoon #shorts #ai
+  tags:
+    - tiny dino
+    - dinosaur cartoon
+    - ai animation
+    - kids entertainment
+    - funny dinosaur
+    - shorts
+
+# ------------------------------------------------------------
+# Story Anti-Repetition
+# ------------------------------------------------------------
+story:
+  anti_repeat: true
+  history_limit: 1000
+  similarity_threshold: 0.75
+  history_file: "data/story_history.json"
+
+# ------------------------------------------------------------
+# Model Configuration (Local Deployment)
+# ------------------------------------------------------------
+models:
+  # LLM via Ollama
+  llm:
+    provider: "ollama"
+    model: "qwen3:14b"
+    base_url: "http://localhost:11434"
+    temperature: 0.8
+    max_tokens: 2048
+
+  # Image Generation - FLUX.1 Dev via Diffusers
+  image:
+    provider: "diffusers"
+    model: "black-forest-labs/FLUX.1-dev"
+    dtype: "bfloat16"
+    enable_cpu_offload: true
+    guidance_scale: 3.5
+    num_inference_steps: 28
+    max_sequence_length: 512
+    ip_adapter_scale: 0.6     # 0.0 = ignore ref, 1.0 = copy ref; 0.6 balances story+character
+
+  # Video Generation - LTX-2.3
+  video:
+    provider: "ltx"
+    model: "Lightricks/LTX-Video-2-3"
+    dtype: "bfloat16"
+    enable_vae_slicing: true
+    num_inference_steps: 30
+    motion_bucket_id: 127
+
+  # Audio Generation - Stable Audio Open
+  audio:
+    provider: "stable_audio"
+    model: "stabilityai/stable-audio-open-1.0"
+    dtype: "bfloat16"
+    audio_length: 8.0       # seconds
+    num_inference_steps: 20
+    cfg_scale: 7.0
+
+# ------------------------------------------------------------
+# Asset Management
+# ------------------------------------------------------------
+assets:
+  outro_video: "assets/outro.mp4"
+  outro_metadata: "assets/outro.json"
+  outro_ref: "assets/outro_ref.png"        # reference image → auto-generates outro.mp4 if missing
+  logo: "assets/logo.png"
+  font: "assets/fonts/ComicSansMS.ttf"
+  watermark: "assets/watermark.png"        # bottom-right corner overlay on every video
+  character_ref: "assets/dinocharacter.png" # Tiny Dino visual reference for IP-Adapter
+
+# ------------------------------------------------------------
+# Logging
+# ------------------------------------------------------------
+logging:
+  level: "INFO"
+  file: "logs/factory.log"
+  max_size_mb: 50
+  backup_count: 5
+  format: "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
