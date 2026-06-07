@@ -114,7 +114,10 @@ Scene 6 - HEARTWARMING ENDING: A tiny life lesson or sweet moment. Dino happy/sa
 RULES:
 - Each scene MUST be visually descriptive for AI image generation
 - Include camera directions (close-up, wide shot, etc.)
+- Include a "motion" field describing how Tiny Dino moves during the 5-second clip
 - Focus on physical comedy and exaggerated reactions
+- Describe ONE clear frozen moment per scene (for the still image)
+- Background must be colorful and detailed — never empty or dark
 - Tiny Dino never speaks human language - only squeaks, roars, body language
 - Setting: colorful prehistoric/fantasy world
 - Mood progression: curious → excited → chaos → determined → triumph → warm
@@ -131,7 +134,8 @@ OUTPUT FORMAT - JSON only:
     {{
       "scene_number": 1,
       "type": "hook",
-      "description": "Detailed visual description for image generation...",
+      "description": "Detailed visual description for image generation - one frozen moment...",
+      "motion": "How Tiny Dino moves in this clip - head tilt, tail wag, bounce, etc.",
       "mood": "curious",
       "camera": "close-up/medium/wide",
       "duration_seconds": 5

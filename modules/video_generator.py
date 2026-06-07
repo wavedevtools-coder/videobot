@@ -11,6 +11,19 @@ from .config_loader import Config
 
 logger = logging.getLogger('video_generator')
 
+# LTX requires num_frames = 8n + 1 (e.g. 121, 145, 153)
+DEFAULT_VIDEO_NEGATIVE = (
+    "fade to black, darkening, black frames, static freeze, flickering, "
+    "glitch, blur, inconsistent motion, morphing, distortion, jittery, low quality"
+)
+
+
+def _ltx_num_frames(duration_seconds: float, fps: int) -> int:
+    """Snap frame count to LTX requirement: 8n + 1."""
+    target = max(9, int(duration_seconds * fps))
+    n = max(1, (target - 1 + 7) // 8)
+    return n * 8 + 1
+
 
 class LTXVideoGenerator:
     """LTX-2.3 image-to-video generation with RTX 5090 optimizations."""
@@ -67,9 +80,10 @@ class LTXVideoGenerator:
         image_path: str,
         prompt: str,
         output_path: str,
-        num_frames: int = 121,  # ~5 seconds at 24fps
+        num_frames: int = 121,
         fps: int = 24,
         seed: Optional[int] = None,
+        negative_prompt: Optional[str] = None,
     ) -> str:
         """Generate video from image using LTX."""
         self._load_pipeline()
@@ -78,7 +92,9 @@ class LTXVideoGenerator:
         if seed is not None:
             generator = torch.Generator("cuda").manual_seed(seed)
 
-        logger.info(f"Generating video from: {image_path}")
+        neg = negative_prompt or DEFAULT_VIDEO_NEGATIVE
+
+        logger.info(f"Generating video from: {image_path} ({num_frames} frames @ {fps}fps)")
         torch.cuda.empty_cache()
 
         try:
@@ -87,17 +103,16 @@ class LTXVideoGenerator:
             image = Image.open(image_path).convert("RGB")
 
             orig_w, orig_h = image.size
-            
-            # LTX prefers exactly 576x1024 for 9:16 vertical video (perfect multiples of 32).
-            # 720 is not divisible by 32, so we generate at 576x1024 and upscale back to 720p.
+
             gen_w, gen_h = 576, 1024
             if image.size != (gen_w, gen_h):
                 logger.info(f"Resizing image {orig_w}x{orig_h} → {gen_w}x{gen_h} for LTX generation")
                 image = image.resize((gen_w, gen_h), Image.LANCZOS)
 
-            result = self._pipe(
+            pipe_kwargs = dict(
                 image=image,
                 prompt=prompt,
+                negative_prompt=neg,
                 num_inference_steps=self.num_steps,
                 num_frames=num_frames,
                 width=gen_w,
@@ -105,16 +120,16 @@ class LTXVideoGenerator:
                 generator=generator,
             )
 
-            video = result.frames[0]  # List of PIL Images
+            result = self._pipe(**pipe_kwargs)
 
-            # Upscale frames back to the original requested size (720x1280) so FFmpeg concat succeeds
+            video = result.frames[0]
+
             if (gen_w, gen_h) != (orig_w, orig_h):
                 logger.info(f"Upscaling generated frames back to {orig_w}x{orig_h}")
                 video = [frame.resize((orig_w, orig_h), Image.LANCZOS) for frame in video]
 
-            # Save as MP4
             self._save_video(video, output_path, fps)
-            logger.info(f"Video saved: {output_path}")
+            logger.info(f"Video saved: {output_path} ({len(video)} frames)")
             return output_path
 
         except torch.cuda.OutOfMemoryError:
@@ -123,17 +138,25 @@ class LTXVideoGenerator:
             raise
 
     def _save_video(self, frames: list, output_path: str, fps: int):
-        """Save frames as MP4 using imageio."""
+        """Save frames as MP4 using imageio with yuv420p for broad player compatibility."""
         import numpy as np
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
 
         try:
             import imageio
-            writer = imageio.get_writer(output_path, fps=fps, codec='libx264', quality=8)
+            writer = imageio.get_writer(
+                output_path,
+                fps=fps,
+                codec='libx264',
+                quality=8,
+                pixelformat='yuv420p',
+                macro_block_size=1,
+            )
             for frame in frames:
-                # imageio.append_data requires a numpy ndarray — convert PIL Images
                 if not isinstance(frame, np.ndarray):
                     frame = np.array(frame)
+                if frame.dtype != np.uint8:
+                    frame = np.clip(frame, 0, 255).astype(np.uint8)
                 writer.append_data(frame)
             writer.close()
         except ImportError:
@@ -190,18 +213,21 @@ class LTXVideoGenerator:
             seed = (base_seed + scene_num * 100) if base_seed else None
 
             try:
-                # Calculate frames for scene duration
                 duration = prompt_data.get('duration', 5)
                 fps = self.config.video.get('fps', 30)
-                num_frames = int(duration * fps)
+                num_frames = _ltx_num_frames(duration, fps)
+
+                video_prompt = prompt_data.get('video_prompt') or prompt_data['prompt']
+                video_neg = prompt_data.get('video_negative_prompt')
 
                 path = self.generate(
                     image_path=img_path,
-                    prompt=prompt_data['prompt'],
+                    prompt=video_prompt,
                     output_path=output_path,
                     num_frames=num_frames,
                     fps=fps,
                     seed=seed,
+                    negative_prompt=video_neg,
                 )
                 video_paths.append(path)
             except Exception as e:
