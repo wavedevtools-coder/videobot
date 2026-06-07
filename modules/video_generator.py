@@ -124,12 +124,16 @@ class LTXVideoGenerator:
 
     def _save_video(self, frames: list, output_path: str, fps: int):
         """Save frames as MP4 using imageio."""
+        import numpy as np
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
         try:
             import imageio
             writer = imageio.get_writer(output_path, fps=fps, codec='libx264', quality=8)
             for frame in frames:
+                # imageio.append_data requires a numpy ndarray — convert PIL Images
+                if not isinstance(frame, np.ndarray):
+                    frame = np.array(frame)
                 writer.append_data(frame)
             writer.close()
         except ImportError:
@@ -149,12 +153,15 @@ class LTXVideoGenerator:
         writer = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
 
         for frame in frames:
-            if hasattr(frame, 'numpy'):
+            # Convert PIL Image to numpy array if needed
+            if not isinstance(frame, np.ndarray):
+                arr = np.array(frame)
+            elif hasattr(frame, 'numpy'):
                 arr = frame.numpy()
             else:
                 arr = frame
             # Convert RGB to BGR for OpenCV
-            if arr.shape[-1] == 3:
+            if arr.ndim == 3 and arr.shape[-1] == 3:
                 arr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
             writer.write(arr)
 
