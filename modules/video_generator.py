@@ -13,7 +13,7 @@ logger = logging.getLogger('video_generator')
 
 
 class LTXVideoGenerator:
-    """LTX-2.3 video generation with RTX 3090 24GB optimizations."""
+    """LTX-2.3 image-to-video generation with RTX 5090 optimizations."""
 
     def __init__(self, config: Optional[Config] = None):
         self.config = config or Config()
@@ -32,11 +32,11 @@ class LTXVideoGenerator:
             return
 
         try:
-            from diffusers import LTXPipeline
+            from diffusers import LTXImageToVideoPipeline
 
             logger.info(f"Loading LTX-Video-2-3 model: {self.model_id}")
 
-            self._pipe = LTXPipeline.from_pretrained(
+            self._pipe = LTXImageToVideoPipeline.from_pretrained(
                 self.model_id,
                 torch_dtype=self.dtype,
             )
