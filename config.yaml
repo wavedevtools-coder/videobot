@@ -99,16 +99,22 @@ models:
     max_tokens: 2048
     timeout: 180
 
-  # Image Generation - FLUX.1 Schnell (open access, no login required)
+  # Image Generation - FLUX.1 Dev (requires Hugging Face authentication)
+  # To use this model, you must authenticate with Hugging Face:
+  #   1. Get a token from https://huggingface.co/settings/tokens
+  #   2. Accept the model license at https://huggingface.co/black-forest-labs/FLUX.1-dev
+  #   3. Set HF_TOKEN environment variable or run: huggingface-cli login
+  # Alternative: Use 'black-forest-labs/FLUX.1-schnell' for faster inference (also requires auth)
   image:
     provider: "diffusers"
-    model: "THUDM/CogView-3-Plus-3B"
-    dtype: "float16"
+    model: "black-forest-labs/FLUX.1-dev"
+    dtype: "bfloat16"
     enable_cpu_offload: true
     guidance_scale: 3.5
     num_inference_steps: 28
     max_sequence_length: 512
-    ip_adapter_scale: 0.6     # 0.0 = ignore ref, 1.0 = copy ref; 0.6 balances story+character
+    ip_adapter_scale: 0.6         # 0.0 = ignore ref, 1.0 = copy ref; 0.6 balances story+character
+    use_auth_token: true          # Required for gated FLUX models
 
   # Video Generation - LTX-2.3
   video:

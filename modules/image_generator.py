@@ -6,6 +6,16 @@ Changes v2.1.0:
     available, so every generated scene has consistent Tiny Dino appearance.
   - Falls back gracefully to prompt-only generation when IP-Adapter weights
     are not installed (cloud environments without ip_adapter package).
+  
+Usage with FLUX.1-dev:
+  1. Get a Hugging Face token from https://huggingface.co/settings/tokens
+  2. Accept the model license at https://huggingface.co/black-forest-labs/FLUX.1-dev
+  3. Set HF_TOKEN environment variable OR run: huggingface-cli login
+  4. Run the pipeline
+  
+Alternative models (also require authentication):
+  - black-forest-labs/FLUX.1-schnell (faster, fewer steps)
+  - black-forest-labs/FLUX.1-pro (highest quality, requires Pro subscription)
 """
 
 import logging
@@ -22,7 +32,11 @@ logger = logging.getLogger('image_generator')
 
 
 class FLUXImageGenerator:
-    """FLUX.1 Dev image generation with character reference consistency."""
+    """FLUX.1 Dev/Schnell image generation with character reference consistency.
+    
+    Supports both FLUX.1-dev and FLUX.1-schnell models from Black Forest Labs.
+    Requires Hugging Face authentication for access to gated models.
+    """
 
     def __init__(self, config: Optional[Config] = None):
         self.config = config or Config()
@@ -87,9 +101,31 @@ class FLUXImageGenerator:
             from diffusers import FluxPipeline
 
             logger.info(f"Loading FLUX.1 Dev model: {self.model_id}")
+            
+            # Check if use_auth_token is enabled and HF token is available
+            use_token = self.img_config.get('use_auth_token', False)
+            load_kwargs = {
+                'torch_dtype': self.dtype,
+            }
+            
+            if use_token:
+                import os
+                hf_token = os.getenv('HF_TOKEN')
+                if hf_token:
+                    load_kwargs['use_auth_token'] = hf_token
+                    logger.info("Using Hugging Face authentication token")
+                else:
+                    logger.warning(
+                        "use_auth_token is enabled but HF_TOKEN environment variable not set. "
+                        "If the model is gated, you need to either:\n"
+                        "  1. Set HF_TOKEN environment variable with your Hugging Face token\n"
+                        "  2. Run 'huggingface-cli login' to authenticate\n"
+                        "  3. Use an open alternative like 'black-forest-labs/FLUX.1-schnell'"
+                    )
+
             self._pipe = FluxPipeline.from_pretrained(
                 self.model_id,
-                torch_dtype=self.dtype,
+                **load_kwargs
             )
 
             if self.enable_cpu_offload:
