@@ -31,7 +31,8 @@ apt-get install -y \
     wget \
     build-essential \
     libgl1 \
-    libglib2.0-0
+    libglib2.0-0 \
+    zstd
 
 # 2. Python Environment
 echo -e "\n${GREEN}[2/6] Setting up Python environment...${NC}"
