@@ -52,7 +52,7 @@ if [ ! -f "venv/bin/pip" ]; then
     rm -q get-pip.py 2>/dev/null || rm -f get-pip.py
 fi
 
-source venv/bin/activate
+. venv/bin/activate
 
 # 3. Python Dependencies
 echo -e "\n${GREEN}[3/6] Installing Python dependencies...${NC}"
@@ -159,9 +159,9 @@ echo -e "${GREEN}✅ Installation Complete!${NC}"
 echo -e "${GREEN}================================${NC}"
 
 echo -e "\n${YELLOW}Next steps:${NC}"
-echo "1. Activate environment: source venv/bin/activate"
+echo "1. Activate environment: . venv/bin/activate"
 echo "2. Run pipeline: python main.py"
 echo "3. Or use the service: sudo systemctl start videobot"
 echo ""
 echo -e "${YELLOW}To run immediately:${NC}"
-echo "source venv/bin/activate && python main.py"
+echo ". venv/bin/activate && python main.py"

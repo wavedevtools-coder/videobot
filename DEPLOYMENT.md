@@ -27,7 +27,7 @@ sudo apt-get install -y ffmpeg git curl wget build-essential libgl1 libglib2.0-0
 ### 3. Setup Python Environment
 ```bash
 python3 -m venv venv
-source venv/bin/activate
+. venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
@@ -46,7 +46,7 @@ ollama pull qwen3:32b
 
 ### 5. Run the Pipeline
 ```bash
-source venv/bin/activate
+. venv/bin/activate
 python main.py
 ```
 
@@ -89,7 +89,7 @@ sudo journalctl -u videobot -f
 crontab -e
 
 # Add this line to run every 30 minutes
-*/30 * * * * cd /opt/videobot && source venv/bin/activate && python main.py >> logs/cron.log 2>&1
+*/30 * * * * cd /opt/videobot && . venv/bin/activate && python main.py >> logs/cron.log 2>&1
 ```
 
 ## Configuration
@@ -216,7 +216,7 @@ git pull
 sudo systemctl restart videobot
 
 # Or run manually
-source venv/bin/activate
+. venv/bin/activate
 python main.py
 ```
 
