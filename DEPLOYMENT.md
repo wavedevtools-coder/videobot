@@ -40,8 +40,8 @@ curl -fsSL https://ollama.com/install.sh | sh
 # Start Ollama service
 ollama serve &
 
-# Pull required model
-ollama pull llama3.2
+# Pull required model (Qwen3 32B for high-quality storytelling)
+ollama pull qwen3:32b
 ```
 
 ### 5. Run the Pipeline
@@ -176,10 +176,11 @@ rm -rf /tmp/huggingface/hub/*
 find outputs/videos -mtime +7 -delete
 ```
 
-**4. Slow Generation (CPU only)**
-- Consider adding a GPU
-- Reduce image resolution in config.yaml
-- Use FLUX.1-schnell (already configured) for faster generation
+**4. Slow Generation / Out of Memory**
+- The new pipeline (Wan I2V + FLUX.1 Dev) requires a high-end GPU (min ~24GB VRAM like RTX 3090/4090/A100)
+- Consider adding a GPU or renting cloud instances
+- Use FLUX.1-schnell instead of FLUX.1-dev for faster image generation (edit `config.yaml`)
+- Wan 2.1 14B is highly recommended for stability over Wan 2.2
 
 ## Performance Optimization
 
