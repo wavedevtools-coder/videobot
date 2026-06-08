@@ -17,12 +17,12 @@ torchvision>=0.16.0
 torchaudio>=2.1.0
 
 # Image Generation - FLUX.1 Dev via Diffusers
-diffusers>=0.25.0
+diffusers>=0.32.0
 transformers>=4.36.0
 accelerate>=0.25.0
 safetensors>=0.4.0
 
-# Video Generation - LTX-Video
+# Video Generation - Wan 2.1 I2V
 # Uses diffusers (above)
 
 # Audio Generation - Stable Audio Open
