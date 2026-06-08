@@ -93,11 +93,8 @@ class ScenePromptBuilder:
 
         prompt = (
             f"{char_enriched}. "
-            f"Single frozen keyframe moment, {cam}. {style}. "
-            f"Tiny Dino clearly visible and centered, full body in frame, "
-            f"rich detailed background fills the scene, bright well-lit, no empty darkness. "
-            f"3D Pixar-style cartoon render, soft subsurface skin, vibrant colors, "
-            f"cinematic composition, vertical 9:16 mobile format, sharp focus, 8K detail"
+            f"Single keyframe, {cam}. {style}. "
+            f"Detailed background, 3D Pixar-style render, vertical 9:16, 8K detail"
         )
 
         return {
@@ -124,16 +121,11 @@ class ScenePromptBuilder:
         style = self.STYLE_PRESETS.get(mood, self.STYLE_PRESETS['curious'])
 
         prompt = (
-            f"Smooth cinematic animation, Tiny Dino, an adorable vibrant lime green "
-            f"3D Pixar-style baby dinosaur with a smooth yellow belly, huge round eyes "
-            f"with bright green irises, and a wide friendly smile. "
+            f"Tiny Dino, cute baby green T-Rex, yellow belly, large expressive eyes. "
             f"Scene: {description}. "
             f"Motion: {motion}. "
             f"{style}. "
-            f"Consistent character appearance throughout, natural fluid motion, "
-            f"stable camera, well-lit colorful scene, "
-            f"3D Pixar cartoon style, vertical portrait format, "
-            f"high quality, best quality, masterpiece"
+            f"High quality 3D Pixar cartoon, vertical portrait format, fluid motion"
         )
 
         return {

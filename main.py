@@ -15,10 +15,14 @@ Environment:
     Set DINOFACTORY_CONFIG to override config.yaml path.
 """
 
-import argparse
-import logging
 import os
 import sys
+
+# Prevent PyTorch CUDA memory fragmentation OOMs
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
+import logging
+import argparse
 import json
 from pathlib import Path
 

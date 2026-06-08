@@ -100,23 +100,23 @@ models:
 
   # Image Generation — FLUX.1 Dev
   # ─────────────────────────────────────────────────────────
-  # black-forest-labs/FLUX.1-dev  ← ACTIVE (gated, needs HF token)
-  #   ~12GB VRAM with CPU offload, 20 inference steps
-  #   guidance_scale 3.0-4.0 optimal
+  # black-forest-labs/FLUX.1-schnell  ← ACTIVE (faster, lower VRAM, 4 steps)
+  #   ~12GB VRAM with CPU offload, 4 inference steps
+  #   guidance_scale 0.0 optimal
   #
   # Alternatives (swap model: below, leave other keys as-is):
-  #   black-forest-labs/FLUX.1-schnell  — Apache 2.0, commercial OK
+  #   black-forest-labs/FLUX.1-dev      — better quality but needs 20+ steps and more VRAM
   #   stabilityai/sdxl-turbo            — no auth, fast 4-step
   #   stabilityai/stable-diffusion-xl-base-1.0  — open, no auth
   # ─────────────────────────────────────────────────────────
   image:
     provider: "diffusers"
-    model: "black-forest-labs/FLUX.1-dev"
+    model: "black-forest-labs/FLUX.1-schnell"
     dtype: "bfloat16"
     enable_cpu_offload: true
-    guidance_scale: 3.5              # FLUX.1 Dev optimal: 3.0-4.0
-    num_inference_steps: 20          # 20-28 steps for quality
-    max_sequence_length: 512
+    guidance_scale: 0.0              # FLUX.1 Schnell optimal: 0.0
+    num_inference_steps: 4           # 4 steps for Schnell
+    max_sequence_length: 256
     ip_adapter_scale: 0.6
     hf_token: ""                     # REQUIRED — set your HuggingFace token
                                      # or run: huggingface-cli login
