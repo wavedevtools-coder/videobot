@@ -120,9 +120,9 @@ except Exception as e:
 # 2. Video Generation (Wan 2.1 I2V)
 try:
     from diffusers import WanImageToVideoPipeline
-    print("Downloading Wan2.1-I2V-14B-480P...")
+    print("Downloading Wan2.1-I2V-14B-480P-Diffusers...")
     WanImageToVideoPipeline.from_pretrained(
-        "Wan-AI/Wan2.1-I2V-14B-480P",
+        "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers",
         torch_dtype=torch.bfloat16,
     )
     print("✓ Wan2.1-I2V downloaded")
