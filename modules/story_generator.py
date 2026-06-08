@@ -1,5 +1,5 @@
 # modules/story_generator.py
-"""Story generation using Qwen3 14B via Ollama."""
+"""Story generation using Qwen3 32B via Ollama."""
 
 import json
 import logging
@@ -185,9 +185,10 @@ Create something COMPLETELY DIFFERENT. Use an unexpected combination of:
         self.scorer = StoryScorer(self.config.quality.get('min_story_score', 70))
         self.llm_config = self.config.models.get('llm', {})
         self.base_url = self.llm_config.get('base_url', 'http://localhost:11434')
-        self.model = self.llm_config.get('model', 'qwen3:14b')
+        self.model = self.llm_config.get('model', 'qwen3:32b')
         self.temperature = self.llm_config.get('temperature', 0.8)
         self.max_tokens = self.llm_config.get('max_tokens', 2048)
+        self.timeout = self.llm_config.get('timeout', 300)
 
         # Anti-repeat
         story_cfg = self.config.story
@@ -241,7 +242,7 @@ Create something COMPLETELY DIFFERENT. Use an unexpected combination of:
         }
 
         try:
-            response = requests.post(url, json=payload, timeout=120)
+            response = requests.post(url, json=payload, timeout=self.timeout)
             if not response.ok:
                 raise RuntimeError(
                     f"Ollama API error: {response.status_code} {response.reason} "
@@ -255,7 +256,7 @@ Create something COMPLETELY DIFFERENT. Use an unexpected combination of:
                 "Ensure Ollama is running: ollama run {self.model}"
             )
         except requests.exceptions.Timeout:
-            raise RuntimeError("Ollama request timed out after 120s")
+            raise RuntimeError(f"Ollama request timed out after {self.timeout}s")
         except Exception as e:
             raise RuntimeError(f"Ollama API error: {e}")
 

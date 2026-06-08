@@ -87,8 +87,8 @@ else
 fi
 
 # Pull required model
-echo "Pulling qwen3:14b model (~9GB)..."
-ollama pull qwen3:14b
+echo "Pulling qwen3:32b model (~20GB)..."
+ollama pull qwen3:32b
 echo -e "${GREEN}✓ Ollama ready${NC}"
 
 # 5. Download Models (Pre-warm cache)
@@ -100,30 +100,33 @@ import os
 import torch
 os.environ['HF_HOME'] = '/tmp/huggingface'
 
-# 1. Image Generation (stabilityai/sdxl-turbo)
+hf_token = os.environ.get('HF_TOKEN', '')
+token_kwargs = {'token': hf_token} if hf_token else {}
+
+# 1. Image Generation (FLUX.1-dev — gated, needs HF_TOKEN)
 try:
     from diffusers import AutoPipelineForText2Image
-    print("Downloading SDXL-Turbo...")
+    print("Downloading FLUX.1-dev...")
     AutoPipelineForText2Image.from_pretrained(
-        "stabilityai/sdxl-turbo",
-        torch_dtype=torch.float16,
-        variant="fp16"
+        "black-forest-labs/FLUX.1-dev",
+        torch_dtype=torch.bfloat16,
+        **token_kwargs,
     )
-    print("✓ SDXL-Turbo downloaded")
+    print("✓ FLUX.1-dev downloaded")
 except Exception as e:
-    print(f"Note: SDXL-Turbo will download on first run: {e}")
+    print(f"Note: FLUX.1-dev will download on first run (needs HF_TOKEN): {e}")
 
-# 2. Video Generation (Lightricks/LTX-Video)
+# 2. Video Generation (Wan 2.1 I2V)
 try:
-    from diffusers import LTXPipeline
-    print("Downloading LTX-Video...")
-    LTXPipeline.from_pretrained(
-        "Lightricks/LTX-Video",
-        torch_dtype=torch.bfloat16
+    from diffusers import WanImageToVideoPipeline
+    print("Downloading Wan2.1-I2V-14B-480P...")
+    WanImageToVideoPipeline.from_pretrained(
+        "Wan-AI/Wan2.1-I2V-14B-480P",
+        torch_dtype=torch.bfloat16,
     )
-    print("✓ LTX-Video downloaded")
+    print("✓ Wan2.1-I2V downloaded")
 except Exception as e:
-    print(f"Note: LTX-Video will download on first run: {e}")
+    print(f"Note: Wan I2V will download on first run: {e}")
 
 # 3. Audio Generation (stabilityai/stable-audio-open-1.0)
 try:
@@ -131,7 +134,8 @@ try:
     print("Downloading Stable Audio Open...")
     StableAudioPipeline.from_pretrained(
         "stabilityai/stable-audio-open-1.0",
-        torch_dtype=torch.float16
+        torch_dtype=torch.float16,
+        **token_kwargs,
     )
     print("✓ Stable Audio Open downloaded")
 except Exception as e:

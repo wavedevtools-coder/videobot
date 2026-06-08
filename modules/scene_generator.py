@@ -102,7 +102,7 @@ class ScenePromptBuilder:
         }
 
     def build_video_prompt(self, scene: Dict[str, Any]) -> Dict[str, str]:
-        """Build a motion-focused prompt for LTX image-to-video."""
+        """Build a motion-focused prompt for Wan I2V image-to-video."""
         mood = scene.get('mood', 'happy')
         description = scene.get('description', '')
         scene_type = scene.get('type', '').lower()
@@ -117,14 +117,16 @@ class ScenePromptBuilder:
         style = self.STYLE_PRESETS.get(mood, self.STYLE_PRESETS['curious'])
 
         prompt = (
-            f"Smooth cinematic animation of Tiny Dino, an adorable vibrant lime green 3D Pixar-style baby dinosaur. "
-            f"He has a smooth yellow belly running up to his chin, huge round eyes with bright green irises, and a wide friendly smile. "
+            f"Smooth cinematic animation, Tiny Dino, an adorable vibrant lime green "
+            f"3D Pixar-style baby dinosaur with a smooth yellow belly, huge round eyes "
+            f"with bright green irises, and a wide friendly smile. "
             f"Scene: {description}. "
             f"Motion: {motion}. "
             f"{style}. "
-            f"Consistent character appearance throughout, fluid natural movement, "
-            f"stable camera, well-lit colorful scene stays visible, "
-            f"3D Pixar cartoon style, vertical 9:16, masterpiece, ultra-high resolution, extremely detailed, sharp focus, 8K, highly clear, no fade to black"
+            f"Consistent character appearance throughout, natural fluid motion, "
+            f"stable camera, well-lit colorful scene, "
+            f"3D Pixar cartoon style, vertical portrait format, "
+            f"high quality, best quality, masterpiece"
         )
 
         return {

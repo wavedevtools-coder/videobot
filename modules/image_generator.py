@@ -1,9 +1,9 @@
 # modules/image_generator.py
 """Image generation via Diffusers — auto-selects pipeline class from model ID.
 
-Changes v2.1.3:
-  - Config switched to stabilityai/sdxl-turbo (Apache 2.0, no HF auth needed,
-    commercial-safe for YouTube monetization, 4-step fast generation).
+Changes v2.2.0:
+  - Default model switched to FLUX.1-dev for higher quality output.
+  - Supports FLUX.1-dev, FLUX.1-schnell, SDXL-turbo, and standard SDXL.
   - Added hf_token config key: set token for gated models (FLUX.1-schnell/dev)
     or leave blank for open models (sdxl-turbo, sdxl-base).
   - local_files_only fast-path: if model is already cached locally, load it
@@ -44,7 +44,7 @@ class FLUXImageGenerator:
     def __init__(self, config: Optional[Config] = None):
         self.config      = config or Config()
         self.img_config  = self.config.models.get('image', {})
-        self.model_id    = self.img_config.get('model', 'stabilityai/sdxl-turbo')
+        self.model_id    = self.img_config.get('model', 'black-forest-labs/FLUX.1-dev')
 
         dtype_name = self.img_config.get('dtype', 'bfloat16')
         self.dtype = {
@@ -53,8 +53,8 @@ class FLUXImageGenerator:
             "fp32": torch.float32,  "float32":  torch.float32,
         }.get(dtype_name, torch.bfloat16)
 
-        self.guidance_scale     = self.img_config.get('guidance_scale', 0.0)
-        self.num_steps          = self.img_config.get('num_inference_steps', 4)
+        self.guidance_scale     = self.img_config.get('guidance_scale', 3.5)
+        self.num_steps          = self.img_config.get('num_inference_steps', 20)
         self.max_seq_length     = self.img_config.get('max_sequence_length', 512)
         self.enable_cpu_offload = self.img_config.get('enable_cpu_offload', True)
 

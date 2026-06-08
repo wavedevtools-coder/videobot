@@ -7,6 +7,7 @@ import sys
 import time
 import shutil
 import tempfile
+import torch
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from pathlib import Path
@@ -17,7 +18,7 @@ from .story_scorer import StoryScorer
 from .story_generator import StoryGenerator
 from .scene_generator import ScenePromptBuilder
 from .image_generator import FLUXImageGenerator
-from .video_generator import LTXVideoGenerator
+from .video_generator import WanVideoGenerator
 from .audio_generator import StableAudioGenerator
 from .assembly_engine import AssemblyEngine
 from .upload_manager import YouTubeUploader
@@ -61,7 +62,7 @@ class GenerationPipeline:
         self.story_gen = StoryGenerator(self.config)
         self.scene_builder = ScenePromptBuilder(self.config)
         self.image_gen = FLUXImageGenerator(self.config)
-        self.video_gen = LTXVideoGenerator(self.config)
+        self.video_gen = WanVideoGenerator(self.config)
         self.audio_gen = StableAudioGenerator(self.config)
         self.assembler = AssemblyEngine(self.config)
         self.uploader = YouTubeUploader(self.config)
@@ -216,6 +217,10 @@ class GenerationPipeline:
             image_paths = stage.result
             self.cost_tracker.record_gpu_time('image_generation', estimate['image_gpu_min'])
             self._save_progress('images', {'count': len(image_paths)})
+
+            # Free VRAM before loading video model
+            torch.cuda.empty_cache()
+            logger.info("VRAM cleared before video generation")
 
             # --- Stage 4: Video Generation ---
             vid_dir = os.path.join(workspace, 'videos')

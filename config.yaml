@@ -89,47 +89,57 @@ story:
 # Model Configuration (Local Deployment)
 # ------------------------------------------------------------
 models:
-  # LLM via Ollama
+  # LLM via Ollama — Qwen3 32B
   llm:
     provider: "ollama"
-    model: "qwen3:14b"
+    model: "qwen3:32b"              # upgraded from qwen3:14b for richer stories
     base_url: "http://localhost:11434"
     temperature: 0.8
     max_tokens: 2048
-    timeout: 180
+    timeout: 300                     # increased for 32B model
 
-  # Image Generation
+  # Image Generation — FLUX.1 Dev
   # ─────────────────────────────────────────────────────────
-  # stabilityai/sdxl-turbo  ← ACTIVE (no auth, commercial OK, fast 4-step)
-  #   Apache 2.0 license — safe for YouTube monetization
-  #   4 inference steps, guidance_scale MUST be 0.0
-  #   ~12GB VRAM; enable_cpu_offload=true drops to ~6GB peak
+  # black-forest-labs/FLUX.1-dev  ← ACTIVE (gated, needs HF token)
+  #   ~12GB VRAM with CPU offload, 20 inference steps
+  #   guidance_scale 3.0-4.0 optimal
   #
   # Alternatives (swap model: below, leave other keys as-is):
-  #   black-forest-labs/FLUX.1-schnell  — needs HF token (gated)
-  #   black-forest-labs/FLUX.1-dev      — needs HF token + non-commercial
-  #   stabilityai/stable-diffusion-xl-base-1.0  — open, no auth needed
+  #   black-forest-labs/FLUX.1-schnell  — Apache 2.0, commercial OK
+  #   stabilityai/sdxl-turbo            — no auth, fast 4-step
+  #   stabilityai/stable-diffusion-xl-base-1.0  — open, no auth
   # ─────────────────────────────────────────────────────────
   image:
     provider: "diffusers"
-    model: "stabilityai/sdxl-turbo"
+    model: "black-forest-labs/FLUX.1-dev"
     dtype: "bfloat16"
     enable_cpu_offload: true
-    guidance_scale: 0.0           # MUST be 0.0 for sdxl-turbo
-    num_inference_steps: 4        # 1-4 steps optimal for turbo
-    max_sequence_length: 512      # used by FLUX models only, ignored otherwise
+    guidance_scale: 3.5              # FLUX.1 Dev optimal: 3.0-4.0
+    num_inference_steps: 20          # 20-28 steps for quality
+    max_sequence_length: 512
     ip_adapter_scale: 0.6
-    hf_token: ""                  # set your HuggingFace token here for gated models
-                                  # or run: huggingface-cli login
+    hf_token: ""                     # REQUIRED — set your HuggingFace token
+                                     # or run: huggingface-cli login
 
-  # Video Generation - LTX-2.3
+  # Video Generation — Wan 2.1 I2V (Image-to-Video)
+  # ─────────────────────────────────────────────────────────
+  # Wan-AI/Wan2.1-I2V-14B-480P  ← ACTIVE
+  #   ~18GB VRAM with CPU offload, 30 inference steps
+  #   Native resolution: 480×832 portrait, upscaled to 720×1280 by FFmpeg
+  #
+  # Alternatives:
+  #   Wan-AI/Wan2.2-I2V     — newer, better motion, more VRAM (~20+ GB)
+  # ─────────────────────────────────────────────────────────
   video:
-    provider: "ltx"
-    model: "Lightricks/LTX-Video"
+    provider: "wan"                  # changed from "ltx"
+    model: "Wan-AI/Wan2.1-I2V-14B-480P"
     dtype: "bfloat16"
     enable_vae_slicing: true
     num_inference_steps: 30
-    motion_bucket_id: 127
+    guidance_scale: 5.0
+    target_fps: 16                   # Wan native fps
+    max_area_width: 480              # Wan-native portrait width
+    max_area_height: 832             # Wan-native portrait height
 
   # Audio Generation - Stable Audio Open
   audio:
