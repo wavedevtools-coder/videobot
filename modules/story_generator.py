@@ -104,12 +104,12 @@ CHARACTER: {character_description}
 PERSONALITY: {personality}
 
 STORY FORMULA (MANDATORY - exactly 6 scenes):
-Scene 1 - HOOK: Dino discovers something or faces a silly problem. Must start with immediate curiosity or surprise.
-Scene 2 - FIRST TRY: Dino attempts to solve it in a naive/enthusiastic way. Setup for comedy.
-Scene 3 - FUNNY FAIL: The attempt backfires in a visually hilarious, slapstick way. This is the comedy peak.
-Scene 4 - SECOND TRY: Dino tries a clever/different approach, learns from mistake.
-Scene 5 - FUNNY WIN: Success happens in an unexpected, adorable way. Visual payoff.
-Scene 6 - HEARTWARMING ENDING: A tiny life lesson or sweet moment. Dino happy/satisfied.
+Scene 1 - SEES SOMETHING INTERESTING: Tiny Dino discovers something intriguing. Must start with immediate curiosity or surprise.
+Scene 2 - TRIES TO GET IT: Tiny Dino attempts to get or interact with it in a naive/enthusiastic way. Setup for comedy.
+Scene 3 - FUNNY ACCIDENT: The attempt backfires in a visually hilarious, slapstick way.
+Scene 4 - MORE CHAOS: The situation escalates into even more silly trouble or a bigger mess.
+Scene 5 - UNEXPECTED SUCCESS: Success happens in an unexpected, adorable way. Visual payoff.
+Scene 6 - FUNNY ENDING: A final comedic twist or sweet funny moment. Dino happy/satisfied.
 
 RULES:
 - Each scene MUST be visually descriptive for AI image generation
@@ -120,7 +120,7 @@ RULES:
 - Background must be colorful and detailed — never empty or dark
 - Tiny Dino never speaks human language - only squeaks, roars, body language
 - Setting: colorful prehistoric/fantasy world
-- Mood progression: curious → excited → chaos → determined → triumph → warm
+- Mood progression: curious → excited → surprised → chaos → happy → silly
 - Avoid: scary content, complex dialogue, dark themes, repetitive gags
 - Target: ages 3-8, universally funny
 
@@ -133,7 +133,7 @@ OUTPUT FORMAT - JSON only:
   "scenes": [
     {{
       "scene_number": 1,
-      "type": "hook",
+      "type": "sees_something",
       "description": "Detailed visual description for image generation - one frozen moment...",
       "motion": "How Tiny Dino moves in this clip - head tilt, tail wag, bounce, etc.",
       "mood": "curious",
@@ -306,7 +306,7 @@ Create something COMPLETELY DIFFERENT. Use an unexpected combination of:
         for i, scene in enumerate(story['scenes']):
             scene['scene_number'] = i + 1
             if 'mood' not in scene:
-                moods = ['curious', 'excited', 'chaos', 'determined', 'triumph', 'warm']
+                moods = ['curious', 'excited', 'surprised', 'chaos', 'happy', 'silly']
                 scene['mood'] = moods[min(i, len(moods)-1)]
             if 'camera' not in scene:
                 scene['camera'] = 'medium shot'

@@ -51,6 +51,13 @@ class ScenePromptBuilder:
     }
 
     MOTION_BY_TYPE = {
+        'sees_something': 'Tiny Dino notices something, head tilts with curiosity, eyes widen, subtle lean forward',
+        'tries_to_get_it': 'Tiny Dino bounces eagerly toward goal, arms flail, tail wags, hopeful energy',
+        'funny_accident': 'Tiny Dino stumbles in slapstick motion, exaggerated bounce, comedic reaction',
+        'more_chaos': 'Tiny Dino spins or flails wildly, frantic but cute motion, escalating comedy',
+        'unexpected_success': 'Tiny Dino lands perfectly by accident, looks around surprised, happy bounce',
+        'funny_ending': 'Tiny Dino does a silly victory dance, goofy grin, playful wiggle',
+        # Legacy mappings
         'hook': 'Tiny Dino notices something, head tilts with curiosity, eyes widen, subtle lean forward',
         'first_try': 'Tiny Dino bounces eagerly toward goal, arms flail, tail wags, hopeful energy',
         'funny_fail': 'Tiny Dino stumbles in slapstick motion, exaggerated bounce, comedic reaction',
